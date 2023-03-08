@@ -1,7 +1,9 @@
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 
-from backtesting.test import SMA, GOOG
+from backtesting.test import SMA
+
+from data_reader import read_min_csv
 
 
 class SmaCross(Strategy):
@@ -17,6 +19,13 @@ class SmaCross(Strategy):
             self.sell()
 
 
-bt = Backtest(GOOG, SmaCross, commission=.0015, exclusive_orders=True)
+df = read_min_csv(
+    "./data/300340.csv",
+    "./data/300340_adj.csv",
+    freq="30min",
+    start_date="20180101",
+    end_date="20221010",
+)
+bt = Backtest(df, SmaCross, commission=0.0015, exclusive_orders=True)
 stats = bt.run()
-bt.plot()
+bt.plot(superimpose=False)
