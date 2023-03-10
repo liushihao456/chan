@@ -4,8 +4,6 @@ from numpy import ceil, floor
 from ta import ATRMD, SUPERTREND
 import talib
 
-from backtesting.test import SMA
-
 from data_reader import read_min_csv
 
 
@@ -78,13 +76,17 @@ class SmaCross(Strategy):
             self.sell()
 
 
+min_data_fname = "./data/300340.csv"
+adj_data_fname = "./data/300340_adj.csv"
+print(f'Reading data from {min_data_fname} ...', end='', flush=True)
 df = read_min_csv(
-    "./data/300340.csv",
-    "./data/300340_adj.csv",
+    min_data_fname,
+    adj_data_fname,
     freq="15min",
     start_date="20180101",
     end_date="20221010",
 )
+print('done')
 # bt = Backtest(df, SmaCross, commission=0.0015, exclusive_orders=True)
 bt = Backtest(
     df, SupertrendCross, cash=1000000, commission=0.0015, exclusive_orders=True
