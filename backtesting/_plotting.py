@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from colorsys import hls_to_rgb, rgb_to_hls
 from itertools import cycle, combinations
 from functools import partial
@@ -11,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from bokeh.colors import RGB
-from bokeh.colors.named import lime as BULL_COLOR, tomato as BEAR_COLOR
+from bokeh.colors.named import white as BULL_COLOR, yellow, green as BEAR_COLOR
 from bokeh.plotting import figure as _figure
 from bokeh.models import (
     CrosshairTool,
@@ -285,7 +286,7 @@ def plot(
     )
 
     inc_cmap = factor_cmap("inc", COLORS, ["0", "1"])
-    cmap = factor_cmap("returns_positive", COLORS, ["0", "1"])
+    cmap = factor_cmap("returns_positive", [BEAR_COLOR, yellow], ["0", "1"])
     colors_darker = [lightness(BEAR_COLOR, 0.35), lightness(BULL_COLOR, 0.35)]
     trades_cmap = factor_cmap("returns_positive", colors_darker, ["0", "1"])
 
@@ -842,6 +843,7 @@ return this.labels[index] || "";
             f.legend.margin = 0
             f.legend.label_text_font_size = "8pt"
             f.legend.click_policy = "hide"
+            f.legend.background_fill_alpha = 0.3
         f.min_border_left = 0
         f.min_border_top = 3
         f.min_border_bottom = 6
