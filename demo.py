@@ -78,7 +78,7 @@ class SmaCross(Strategy):
 
 min_data_fname = "./data/300340.csv"
 adj_data_fname = "./data/300340_adj.csv"
-print(f'Reading data from {min_data_fname} ...', end='', flush=True)
+print(f"Reading data from {min_data_fname} ...", end="", flush=True)
 df = read_min_csv(
     min_data_fname,
     adj_data_fname,
@@ -86,7 +86,7 @@ df = read_min_csv(
     start_date="20180101",
     end_date="20221010",
 )
-print('done')
+print("done")
 # bt = Backtest(df, SmaCross, commission=0.0015, exclusive_orders=True)
 bt = Backtest(
     df, SupertrendCross, cash=1000000, commission=0.0015, exclusive_orders=True
