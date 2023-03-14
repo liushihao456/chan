@@ -27,9 +27,34 @@ window._bt_autoscale_timeout = setTimeout(function () {
         min = Math.min.apply(null, source.data['ohlc_low'].slice(i, j));
     _bt_scale_range(ohlc_range, min, max, true);
 
-    if (volume_range) {
+    if (typeof volume_range !== 'undefined') {
         max = Math.max.apply(null, source.data['Volume'].slice(i, j));
-        _bt_scale_range(volume_range, 0, max * 1.03, false);
+        _bt_scale_range(volume_range, 0, max * 1.1, false);
+    }
+
+    if (typeof equity_range !== 'undefined') {
+        min = Math.min.apply(null, source.data['equity'].slice(i, j));
+        max = Math.max.apply(null, source.data['equity'].slice(i, j));
+        _bt_scale_range(equity_range, min, max, true);
+    }
+
+    if (typeof return_range !== 'undefined') {
+        min = Math.min.apply(null, source.data['eq_return'].slice(i, j));
+        max = Math.max.apply(null, source.data['eq_return'].slice(i, j));
+        _bt_scale_range(return_range, min, max, true);
+    }
+
+    if (typeof indicator_ranges !== 'undefined') {
+        let keys = Object.keys(indicator_ranges);
+        for(var count=0;count<keys.length;count++){
+            if(keys[count]){
+                max = Math.max.apply(null, source.data[keys[count]+'_max'].slice(i, j));
+                min = Math.min.apply(null, source.data[keys[count]+'_min'].slice(i, j));
+                if(min && max){
+                    _bt_scale_range(indicator_ranges[keys[count]], min, max, true);
+                }    
+            }
+        }
     }
 
 }, 50);

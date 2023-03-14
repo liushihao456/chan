@@ -295,7 +295,7 @@ def plot(
             args=dict(
                 axis=fig_ohlc.xaxis[0],
                 formatter=DatetimeTickFormatter(
-                    days=["%d %b", "%a %d"], months=["%m/%Y", "%b'%y"]
+                    days=["%Y-%m-%d"], months=["%Y-%m"]
                 ),
                 source=source,
             ),
@@ -480,6 +480,7 @@ return this.labels[index] || "";
         )
 
         figs_above_ohlc.append(fig)
+        return fig
 
     def _plot_drawdown_section():
         """Drawdown section"""
@@ -683,6 +684,7 @@ return this.labels[index] || "";
 
         ohlc_colors = colorgen()
         indicator_figs = []
+        non_overlay_indicator_idxs = []
 
         for i, value in enumerate(indicators):
             value = np.atleast_2d(value)
@@ -699,6 +701,7 @@ return this.labels[index] || "";
             else:
                 fig = new_indicator_figure()
                 indicator_figs.append(fig)
+                non_overlay_indicator_idxs.append(i)
             tooltips = []
             colors = value._opts["color"]
             colors = (
@@ -707,6 +710,10 @@ return this.labels[index] || "";
                 or (cycle([next(ohlc_colors)]) if is_overlay else colorgen())
             )
             legend_label = LegendStr(value.name)
+            indicator_max = value.df.max(axis='columns')
+            indicator_min = value.df.min(axis='columns')
+            source.add(indicator_max, f'indicator_{i}_range_max')
+            source.add(indicator_min, f'indicator_{i}_range_min')
             for j, arr in enumerate(value, 1):
                 color = next(colors)
                 source_name = f"{legend_label}_{i}_{j}"
@@ -786,15 +793,15 @@ return this.labels[index] || "";
                 # have the legend only contain text without the glyph
                 if len(value) == 1:
                     fig.legend.glyph_width = 0
-        return indicator_figs
+        return (indicator_figs, non_overlay_indicator_idxs)
 
     # Construct figure ...
 
     if plot_equity:
-        _plot_equity_section()
+        fig_equity = _plot_equity_section()
 
     if plot_return:
-        _plot_equity_section(is_return=True)
+        fig_return = _plot_equity_section(is_return=True)
 
     if plot_drawdown:
         figs_above_ohlc.append(_plot_drawdown_section())
@@ -811,9 +818,10 @@ return this.labels[index] || "";
 
     ohlc_bars = _plot_ohlc()
     _plot_ohlc_trades()
-    indicator_figs = _plot_indicators()
+    indicator_figs, non_overlay_indicator_idxs = _plot_indicators()
     if reverse_indicators:
         indicator_figs = indicator_figs[::-1]
+        non_overlay_indicator_idxs = non_overlay_indicator_idxs[::-1]
     figs_below_ohlc.extend(indicator_figs)
 
     set_tooltips(fig_ohlc, ohlc_tooltips, vline=True, renderers=[ohlc_bars])
@@ -822,8 +830,21 @@ return this.labels[index] || "";
     source.add(ohlc_extreme_values.max(1), "ohlc_high")
 
     custom_js_args = dict(ohlc_range=fig_ohlc.y_range, source=source)
+
     if plot_volume:
         custom_js_args.update(volume_range=fig_volume.y_range)
+
+    if plot_equity:
+        custom_js_args.update(equity_range=fig_equity.y_range)
+
+    if plot_return:
+        custom_js_args.update(return_range=fig_return.y_range)
+
+    indicator_ranges = {}
+    for idx, (indicator, indicator_idx) in enumerate(zip(indicator_figs, non_overlay_indicator_idxs)):
+        indicator_range_key = f'indicator_{indicator_idx}_range'
+        indicator_ranges.update({indicator_range_key: indicator.y_range})
+    custom_js_args.update(indicator_ranges=indicator_ranges)
 
     fig_ohlc.x_range.js_on_change(
         "end", CustomJS(args=custom_js_args, code=_AUTOSCALE_JS_CALLBACK)
