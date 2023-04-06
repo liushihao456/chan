@@ -1,6 +1,9 @@
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
 from numpy import ceil, floor
+from czsc.analyze import CZSC
+from czsc.enum import Freq
+from czsc.stock import StockData, format_stock_kline
 from ta import ATRMD, SUPERTREND
 import talib
 
@@ -14,6 +17,12 @@ class SupertrendCross(Strategy):
     atr_md_n = 14
 
     def init(self):
+        self.sd = StockData(df, '300340', Freq.F1, [Freq.F1, Freq.F5, Freq.F30, Freq.D])
+        self.czsc = CZSC(self.sd.bars[Freq.D])
+        bis = self.czsc.bi_list
+        for bi in bis:
+            print(bi)
+
         self.initial_capital = 1000000
         self.supertrend = self.I(
             SUPERTREND,
@@ -63,35 +72,24 @@ class SupertrendCross(Strategy):
                 trade.sl = floor(p * 1.007 * 100) / 100
 
 
-class SmaCross(Strategy):
-    def init(self):
-        price = self.data.Close
-        self.ma1 = self.I(SMA, price, 10)
-        self.ma2 = self.I(SMA, price, 20)
-
-    def next(self):
-        if crossover(self.ma1, self.ma2):
-            self.buy()
-        elif crossover(self.ma2, self.ma1):
-            self.sell()
-
-
 min_data_fname = "./data/300340.csv"
 adj_data_fname = "./data/300340_adj.csv"
 print(f"Reading data from {min_data_fname} ...", end="", flush=True)
 df = read_min_csv(
     min_data_fname,
     adj_data_fname,
-    freq="15min",
-    start_date="20180101",
+    freq="1min",
+    # start_date="20180101",
+    start_date="20220901",
     end_date="20221010",
 )
 print("done")
-# bt = Backtest(df, SmaCross, commission=0.0015, exclusive_orders=True)
+
+# Chan
 bt = Backtest(
     df, SupertrendCross, cash=1000000, commission=0.0015, exclusive_orders=True
 )
 stats = bt.run()
-print(stats)
-bt.plot(superimpose=False, resample=False)
-stats["_trades"].to_csv("result/trades.csv", index=False)
+# print(stats)
+# bt.plot(superimpose=False, resample=False)
+# stats["_trades"].to_csv("result/trades.csv", index=False)
