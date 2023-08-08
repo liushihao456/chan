@@ -1,5 +1,18 @@
 from abc import ABC, abstractmethod
-from chan.structs import *
+from datetime import datetime
+
+import pandas as pd
+
+from chan.structs import (
+    Bar,
+    Bi,
+    Direction,
+    ExclusiveBar,
+    FenXing,
+    Freq,
+    XianDuan,
+    ZhongShu,
+)
 
 
 class ReverseAccessor:
@@ -64,9 +77,9 @@ class StockSubscribeCsv(StockSubscribe):
             )
             bars.append(Bar(open=r.Open, high=r.High, low=r.Low, close=r.Close,
                             volume=r.Volume, turnover=r.Turnover, num_trades=r.NumTrades,
-                            dt=dt, freq=Freq.F1))
+                            dt=dt, freq=Freq.F1, index=len(bars)))
         return bars
-    
+
 
 class Stock:
     stock_sub: StockSubscribe
@@ -100,7 +113,8 @@ class Stock:
                     turnover=self.freq_bars[f1][-1].turnover,
                     num_trades=self.freq_bars[f1][-1].num_trades,
                     dt=self.freq_bars[f1][-1].dt,
-                    freq=f
+                    freq=f,
+                    index=len(self.freq_bars)
                 ))
             else:
                 fbar = self.freq_bars[f][-1]
@@ -121,6 +135,7 @@ class Stock:
 class ChanAnalyzer:
     stock: Stock
     freqs: list[Freq]
+    unresolved_bars: list[ExclusiveBar]
     fxs: list[FenXing]
     bis: list[Bi]
     xds: list[XianDuan]
@@ -129,13 +144,134 @@ class ChanAnalyzer:
     def __init__(self, stock: Stock):
         self.stock = stock
         self.freqs = stock.freqs
+        self.unresolved_bars = []
         self.fxs = []
         self.bis = []
         self.xds = []
         self.zss = []
 
     def update(self):
+        self.check_exclusive_bar()
+        self.check_fx()
+        self.check_bi()
+
+    def exclude(self, bar1: ExclusiveBar, bar2: ExclusiveBar | Bar, bar3: Bar = None):
+        if bar3 is None:
+            if (bar1.high >= bar2.high and bar1.low <= bar2.low) or \
+               (bar2.high >= bar1.high and bar2.low <= bar1.low):
+                return ExclusiveBar(bar1.bars + [bar2], Direction.Up)
+            else:
+                return ExclusiveBar([bar2])
+        else:
+            if (bar2.high >= bar3.high and bar2.low <= bar3.low) or \
+               (bar3.high >= bar2.high and bar3.low <= bar2.low):
+                if bar2.high >= bar1.high:
+                    return ExclusiveBar(bar2.bars + [bar3], Direction.Up)
+                else:
+                    return ExclusiveBar(bar2.bars + [bar3], Direction.Down)
+            else:
+                return ExclusiveBar([bar3])
+
+    def check_exclusive_bar(self):
         b = self.stock[self.freqs[0]][0]
-        print(f'{b.dt}  {b.open}')
-        b = self.stock[self.freqs[1]][0]
-        print(f'{b.dt}  {b.open}')
+        if len(self.unresolved_bars) >= 2:
+            eb = self.exclude(self.unresolved_bars[-2], self.unresolved_bars[-1], b)
+            if eb.index == self.unresolved_bars[-1].index:
+                # The new bar combined with the last bar
+                self.unresolved_bars = self.unresolved_bars[:-1] + [eb]
+            else:
+                self.unresolved_bars = [self.unresolved_bars[-2], self.unresolved_bars[-1], eb]
+        elif len(self.unresolved_bars) == 1:
+            eb = self.exclude(self.unresolved_bars[0], b)
+            if eb.index == self.unresolved_bars[0].index:
+                # The new bar combined with the last bar
+                self.unresolved_bars = [eb]
+            else:
+                self.unresolved_bars = [self.unresolved_bars[0], eb]
+        else:
+            eb = ExclusiveBar([b])
+            self.unresolved_bars = [eb]
+
+    def check_fx(self):
+        if len(self.unresolved_bars) < 3:
+            return
+        b1, b2, b3 = self.unresolved_bars
+        if b1.low > b2.low < b3.low and b1.high > b2.high < b3.high:
+            fx = FenXing(self.unresolved_bars, Direction.Down)
+            if not self.fxs or fx.index != self.fxs[-1].index:
+                self.fxs.append(fx)
+        if b1.low < b2.low > b3.low and b1.high < b2.high > b3.high:
+            fx = FenXing(self.unresolved_bars, Direction.Up)
+            if not self.fxs or fx.index != self.fxs[-1].index:
+                self.fxs.append(fx)
+
+    def num_bars_between(self, bar1: Bar, bar2: Bar) -> int:
+        return bar2.index - bar1.index - 1
+
+    def check_bi(self):
+        if self.bis and self.fxs:
+            fx1 = self.bis[-1].end_fx
+            fx = self.fxs[-1]
+            if fx1.direction != fx.direction:
+                if self.num_bars_between(fx1.exbars[-1].bars[-1], fx.exbars[0].bars[0]) >= 0:
+                    # Make sure the endpoint FXs are the highest and lowest of a Bi
+                    if fx.direction == Direction.Up:
+                        for f in self.fxs[:-1]:
+                            if f.direction == fx.direction and f.high > fx.high:
+                                return
+                    if fx.direction == Direction.Down:
+                        for f in self.fxs[:-1]:
+                            if f.direction == fx.direction and f.low < fx.low:
+                                return
+                    bi = Bi(fx1, fx)
+                    self.bis.append(bi)
+                    self.fxs.clear()
+                    return
+                else:
+                    if fx.direction == Direction.Down and fx.low < self.bis[-1].start_price:
+                        self.bis = self.bis[:-1]
+                        self.bis[-1].extend(fx)
+                    if fx.direction == Direction.Up and fx.high > self.bis[-1].start_price:
+                        self.bis = self.bis[:-1]
+                        self.bis[-1].extend(fx)
+            if fx1.direction == fx.direction:
+                if (fx1.direction == Direction.Up and fx.high > fx1.high) or \
+                    (fx1.direction == Direction.Down and fx.low < fx1.low):
+                    self.bis[-1].extend(fx)
+                    self.fxs.clear()
+        else:
+            # The first Bi
+            for i in range(len(self.fxs)):
+                fx_i = self.fxs[i]
+                highest_dingfx = 0
+                lowest_difx = 1e+10
+                for j in range(i + 1, len(self.fxs)):
+                    fx_j = self.fxs[j]
+
+                    # Make sure the endpoint FXs are the highest and lowest of a Bi
+                    if fx_i.direction == Direction.Down and fx_j.direction == Direction.Up:
+                        if fx_j.high < highest_dingfx:
+                            continue
+                        else:
+                            highest_dingfx = fx_j.high
+                    if fx_i.direction == Direction.Up and fx_j.direction == Direction.Down:
+                        if fx_j.low > lowest_difx:
+                            continue
+                        else:
+                            lowest_difx = fx_j.low
+
+                    # Early quit
+                    if fx_i.direction == fx_j.direction == Direction.Up:
+                        if fx_j.high > fx_i.high:
+                            break
+                    if fx_i.direction == fx_j.direction == Direction.Down:
+                        if fx_j.low < fx_i.low:
+                            break
+
+                    if self.num_bars_between(fx_i.exbars[-1].bars[-1], fx_j.exbars[0].bars[0]) >= 0:
+                        if (fx_i.direction == Direction.Up and fx_j.direction == Direction.Down and fx_i.high > fx_j.low) or \
+                            (fx_i.direction == Direction.Down and fx_j.direction == Direction.Up and fx_i.low < fx_j.high):
+                            bi = Bi(fx_i, fx_j)
+                            self.bis.append(bi)
+                            self.fxs = self.fxs[j+1:]
+                            return
