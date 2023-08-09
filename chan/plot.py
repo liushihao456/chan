@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from math import pi
 from bokeh.plotting import figure, show
+from bokeh.layouts import column
 from chan.analyzer import ChanAnalyzer
 import pandas as pd
 
@@ -27,24 +28,27 @@ class Plot:
         pass
 
     def generate_plot(self) -> figure:
-        p = figure(y_axis_label='Candlestick', width=1000)
-        p.sizing_mode = 'stretch_both'
-        p.xaxis.major_label_orientation = pi / 4
-        p.grid.grid_line_alpha = 0.3
+        kline_fig = figure(y_axis_label='Candlestick')
+        kline_fig.sizing_mode = 'stretch_both'
+        kline_fig.xaxis.major_label_orientation = pi / 4
+        kline_fig.grid.grid_line_alpha = 0.3
 
         df = self.ohlcv_dfs[self.freqs[0]]
-        print(df)
         inc = df.close > df.open
         dec = df.close < df.open
         w = 0.6
-        p.segment(df.index, df.high, df.index, df.low, color='black')
-        p.vbar(df.index[inc], w, df.open[inc], df.close[inc], fill_color='#D5E1DD', line_color='black')
-        p.vbar(df.index[dec], w, df.open[dec], df.close[dec], fill_color='#F2583E', line_color='black')
+        kline_fig.segment(df.index, df.high, df.index, df.low, color='black')
+        kline_fig.vbar(df.index[inc], w, df.open[inc], df.close[inc], fill_color='#D5E1DD', line_color='black')
+        kline_fig.vbar(df.index[dec], w, df.open[dec], df.close[dec], fill_color='#F2583E', line_color='black')
 
         bi_df = self.bi_dfs[self.freqs[0]]
-        p.segment(bi_df.start_index, bi_df.start_price, bi_df.end_index, bi_df.end_price, color='red')
+        kline_fig.segment(bi_df.start_index, bi_df.start_price, bi_df.end_index, bi_df.end_price, color='red')
 
         xd_df = self.xd_dfs[self.freqs[0]]
-        p.segment(xd_df.start_index, xd_df.start_price, xd_df.end_index, xd_df.end_price, color='blue')
+        kline_fig.segment(xd_df.start_index, xd_df.start_price, xd_df.end_index, xd_df.end_price, color='blue')
 
-        show(p)
+        vol_fig = figure(y_axis_label='Volume', height=200)
+        vol_fig.sizing_mode = 'stretch_width'
+        vol_fig.vbar(df.index, 0.4, 0, df.volume, color='black')
+
+        show(column([kline_fig, vol_fig], sizing_mode='stretch_both'))
