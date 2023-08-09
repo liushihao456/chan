@@ -12,14 +12,18 @@ class Plot:
         self.freqs = analyzer.freqs
         self.ohlcv_dfs = {}
         self.bi_dfs = {}
+        self.xd_dfs = {}
         for freq in self.freqs:
             bars = analyzer.stock.freq_bars[freq]
             self.ohlcv_dfs[freq] = pd.DataFrame.from_records([asdict(b) for b in bars])
-            bis = analyzer.bis
             self.bi_dfs[freq] = pd.DataFrame.from_records([{'start_index': b.start_index,
                                                             'start_price': b.start_price,
                                                             'end_index': b.end_index,
-                                                            'end_price': b.end_price} for b in bis])
+                                                            'end_price': b.end_price} for b in analyzer.bis])
+            self.xd_dfs[freq] = pd.DataFrame.from_records([{'start_index': xd.start_index,
+                                                            'start_price': xd.start_price,
+                                                            'end_index': xd.end_index,
+                                                            'end_price': xd.end_price} for xd in analyzer.xds])
         pass
 
     def generate_plot(self) -> figure:
@@ -38,6 +42,9 @@ class Plot:
         p.vbar(df.index[dec], w, df.open[dec], df.close[dec], fill_color='#F2583E', line_color='black')
 
         bi_df = self.bi_dfs[self.freqs[0]]
-        print(bi_df)
         p.segment(bi_df.start_index, bi_df.start_price, bi_df.end_index, bi_df.end_price, color='red')
+
+        xd_df = self.xd_dfs[self.freqs[0]]
+        p.segment(xd_df.start_index, xd_df.start_price, xd_df.end_index, xd_df.end_price, color='blue')
+
         show(p)

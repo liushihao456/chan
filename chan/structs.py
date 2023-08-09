@@ -114,38 +114,47 @@ class FenXing:
 class Bi:
     start_fx: FenXing
     end_fx: FenXing
-    start_dt: datetime
-    end_dt: datetime
-    start_index: int
-    end_index: int
-    start_price: float
-    end_price: float
-    direction: Direction
-    
+
     def __init__(self, start_fx: FenXing, end_fx: FenXing):
         self.start_fx = start_fx
         self.end_fx = end_fx
-        self.start_dt = start_fx.dt
-        self.end_dt = end_fx.dt
-        self.start_index = start_fx.index
-        self.end_index = end_fx.index
-        if start_fx.direction == Direction.Up:
-            self.direction = Direction.Down
-            self.start_price = start_fx.high
-            self.end_price = end_fx.low
-        else:
-            self.direction = Direction.Up
-            self.start_price = start_fx.low
-            self.end_price = end_fx.high
 
     def extend(self, fx: FenXing):
         self.end_fx = fx
-        self.end_dt = fx.dt
-        self.end_index = fx.index
+
+    @property
+    def direction(self) -> Direction:
+        return self.end_fx.direction
+
+    @property
+    def start_index(self) -> int:
+        return self.start_fx.index
+
+    @property
+    def end_index(self) -> int:
+        return self.end_fx.index
+
+    @property
+    def start_dt(self) -> datetime:
+        return self.start_fx.dt
+
+    @property
+    def end_dt(self) -> datetime:
+        return self.end_fx.dt
+
+    @property
+    def start_price(self) -> float:
         if self.direction == Direction.Up:
-            self.end_price = fx.high
+            return self.start_fx.low
         else:
-            self.end_price = fx.low
+            return self.start_fx.high
+
+    @property
+    def end_price(self) -> float:
+        if self.direction == Direction.Up:
+            return self.end_fx.high
+        else:
+            return self.end_fx.low
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -175,6 +184,14 @@ class XianDuan:
         return self.bis[-1]
 
     @property
+    def start_index(self) -> int:
+        return self.bis[0].start_index
+
+    @property
+    def end_index(self) -> int:
+        return self.bis[-1].end_index
+
+    @property
     def start_dt(self) -> datetime:
         return self.bis[0].start_dt
 
@@ -193,6 +210,16 @@ class XianDuan:
     @property
     def direction(self) -> Direction:
         return self.start_bi.direction
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __str__(self) -> str:
+        if self.direction == Direction.Up:
+            return f'Xianduan Up from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
+        else:
+            return f'Xianduan Down from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
+
 
 class ZouShi:
     xds: list[XianDuan]

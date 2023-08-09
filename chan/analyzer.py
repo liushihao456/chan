@@ -156,6 +156,7 @@ class ChanAnalyzer:
         self.check_exclusive_bar()
         self.check_fx()
         self.check_bi()
+        self.check_xd()
 
     def exclude(self, bar1: ExclusiveBar, bar2: ExclusiveBar | Bar, bar3: Bar = None):
         if bar3 is None:
@@ -287,13 +288,29 @@ class ChanAnalyzer:
     def check_xd(self):
         if len(self.bis) < 3:
             return
-        if self.xds:
-            if self.unresolved_bis[-1].direction == self.xds[-1].direction:
-                if self.xds[-1].direction == Direction.Up and self.unresolved_bis[-1].end_price > self.xds[-1].end_price:
-                    self.xds[-1].extend(self.unresolved_bis)
-                elif self.xds[-1].direction == Direction.Down and self.unresolved_bis[-1].end_price > self.xds[-1].end_price:
-                    self.xds[-1].extend(self.unresolved_bis)
-        else:
+        if self.xds and self.unresolved_bis:
+            xd1 = self.xds[-1]
+            bi1 = self.unresolved_bis[-1]
+            if bi1.direction == xd1.direction:
+                if xd1.direction == Direction.Up and bi1.start_price >= xd1.start_price and bi1.end_price >= xd1.end_price:
+                    xd1.extend(self.unresolved_bis)
+                    self.unresolved_bis.clear()
+                elif xd1.direction == Direction.Down and bi1.start_price <= xd1.start_price and bi1.end_price <= xd1.end_price:
+                    xd1.extend(self.unresolved_bis)
+                    self.unresolved_bis.clear()
+            elif len(self.unresolved_bis) > 1 and len(self.unresolved_bis) % 2 == 1:
+                bi0 = self.unresolved_bis[0]
+                if xd1.direction == Direction.Up and bi1.start_price < bi0.start_price \
+                   and bi1.end_price < bi0.end_price:
+                    xd = XianDuan(self.unresolved_bis[:])
+                    self.xds.append(xd)
+                    self.unresolved_bis.clear()
+                elif xd1.direction == Direction.Down and bi1.start_price > bi0.start_price \
+                   and bi1.end_price > bi0.end_price:
+                    xd = XianDuan(self.unresolved_bis[:])
+                    self.xds.append(xd)
+                    self.unresolved_bis.clear()
+        elif not self.xds:
             for i in range(len(self.unresolved_bis)):
                 bi_i = self.unresolved_bis[i]
                 for j in range(i + 1, len(self.unresolved_bis)):
@@ -303,7 +320,9 @@ class ChanAnalyzer:
                             xd = XianDuan(self.unresolved_bis[i:j+1])
                             self.xds.append(xd)
                             self.unresolved_bis = self.unresolved_bis[j+1:]
+                            return
                         elif bi_i.direction == Direction.Down and bi_i.start_price > bi_j.start_price:
                             xd = XianDuan(self.unresolved_bis[i:j+1])
                             self.xds.append(xd)
                             self.unresolved_bis = self.unresolved_bis[j+1:]
+                            return
