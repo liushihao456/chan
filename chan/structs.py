@@ -159,18 +159,40 @@ class Bi:
 
 class XianDuan:
     bis: list[Bi]
-    start_bi: Bi
-    end_bi: Bi
-    start_dt: datetime
-    end_dt: datetime
 
     def __init__(self, bis: list[Bi]):
         self.bis = bis
-        self.start_bi = bis[0]
-        self.end_bi = bis[-1]
-        self.start_dt = bis[0].start_dt
-        self.end_dt = bis[-1].end_dt
 
+    def extend(self, bis: list[Bi]):
+        self.bis.extend(bis)
+
+    @property
+    def start_bi(self) -> Bi:
+        return self.bis[0]
+
+    @property
+    def end_bi(self) -> Bi:
+        return self.bis[-1]
+
+    @property
+    def start_dt(self) -> datetime:
+        return self.bis[0].start_dt
+
+    @property
+    def end_dt(self) -> datetime:
+        return self.bis[-1].end_dt
+
+    @property
+    def start_price(self) -> float:
+        return self.start_bi.start_price
+
+    @property
+    def end_price(self) -> float:
+        return self.end_bi.end_price
+
+    @property
+    def direction(self) -> Direction:
+        return self.start_bi.direction
 
 class ZouShi:
     xds: list[XianDuan]

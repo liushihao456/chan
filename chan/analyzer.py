@@ -135,7 +135,6 @@ class Stock:
 class ChanAnalyzer:
     stock: Stock
     freqs: list[Freq]
-    unresolved_bars: list[ExclusiveBar]
     fxs: list[FenXing]
     bis: list[Bi]
     xds: list[XianDuan]
@@ -146,8 +145,11 @@ class ChanAnalyzer:
         self.freqs = stock.freqs
         self.unresolved_bars = []
         self.fxs = []
+        self.unresolved_fxs = []
         self.bis = []
+        self.unresolved_bis = []
         self.xds = []
+        self.unresolved_xds = []
         self.zss = []
 
     def update(self):
@@ -199,54 +201,59 @@ class ChanAnalyzer:
         if b1.low > b2.low < b3.low and b1.high > b2.high < b3.high:
             fx = FenXing(self.unresolved_bars, Direction.Down)
             if not self.fxs or fx.index != self.fxs[-1].index:
+                self.unresolved_fxs.append(fx)
                 self.fxs.append(fx)
         if b1.low < b2.low > b3.low and b1.high < b2.high > b3.high:
             fx = FenXing(self.unresolved_bars, Direction.Up)
             if not self.fxs or fx.index != self.fxs[-1].index:
+                self.unresolved_fxs.append(fx)
                 self.fxs.append(fx)
 
     def num_bars_between(self, bar1: Bar, bar2: Bar) -> int:
         return bar2.index - bar1.index - 1
 
     def check_bi(self):
-        if self.bis and self.fxs:
+        if self.bis and self.unresolved_fxs:
             fx1 = self.bis[-1].end_fx
-            fx = self.fxs[-1]
+            fx = self.unresolved_fxs[-1]
             if fx1.direction != fx.direction:
                 if self.num_bars_between(fx1.exbars[-1].bars[-1], fx.exbars[0].bars[0]) >= 0:
                     # Make sure the endpoint FXs are the highest and lowest of a Bi
                     if fx.direction == Direction.Up:
-                        for f in self.fxs[:-1]:
+                        for f in self.unresolved_fxs[:-1]:
                             if f.direction == fx.direction and f.high > fx.high:
                                 return
                     if fx.direction == Direction.Down:
-                        for f in self.fxs[:-1]:
+                        for f in self.unresolved_fxs[:-1]:
                             if f.direction == fx.direction and f.low < fx.low:
                                 return
                     bi = Bi(fx1, fx)
                     self.bis.append(bi)
-                    self.fxs.clear()
+                    self.unresolved_bis.append(bi)
+                    self.unresolved_fxs.clear()
                     return
                 else:
                     if fx.direction == Direction.Down and fx.low < self.bis[-1].start_price:
                         self.bis = self.bis[:-1]
+                        self.unresolved_bis = self.unresolved_bis[:-1]
                         self.bis[-1].extend(fx)
                     if fx.direction == Direction.Up and fx.high > self.bis[-1].start_price:
                         self.bis = self.bis[:-1]
+                        self.unresolved_bis = self.unresolved_bis[:-1]
                         self.bis[-1].extend(fx)
             if fx1.direction == fx.direction:
                 if (fx1.direction == Direction.Up and fx.high > fx1.high) or \
                     (fx1.direction == Direction.Down and fx.low < fx1.low):
                     self.bis[-1].extend(fx)
-                    self.fxs.clear()
+                    self.unresolved_fxs.clear()
         else:
             # The first Bi
-            for i in range(len(self.fxs)):
-                fx_i = self.fxs[i]
+            for i in range(len(self.unresolved_fxs)):
+                fx_i = self.unresolved_fxs[i]
                 highest_dingfx = 0
                 lowest_difx = 1e+10
-                for j in range(i + 1, len(self.fxs)):
-                    fx_j = self.fxs[j]
+                for j in range(i + 1, len(self.unresolved_fxs)):
+                    fx_j = self.unresolved_fxs[j]
 
                     # Make sure the endpoint FXs are the highest and lowest of a Bi
                     if fx_i.direction == Direction.Down and fx_j.direction == Direction.Up:
@@ -273,5 +280,30 @@ class ChanAnalyzer:
                             (fx_i.direction == Direction.Down and fx_j.direction == Direction.Up and fx_i.low < fx_j.high):
                             bi = Bi(fx_i, fx_j)
                             self.bis.append(bi)
-                            self.fxs = self.fxs[j+1:]
+                            self.unresolved_bis.append(bi)
+                            self.unresolved_fxs = self.unresolved_fxs[j+1:]
                             return
+
+    def check_xd(self):
+        if len(self.bis) < 3:
+            return
+        if self.xds:
+            if self.unresolved_bis[-1].direction == self.xds[-1].direction:
+                if self.xds[-1].direction == Direction.Up and self.unresolved_bis[-1].end_price > self.xds[-1].end_price:
+                    self.xds[-1].extend(self.unresolved_bis)
+                elif self.xds[-1].direction == Direction.Down and self.unresolved_bis[-1].end_price > self.xds[-1].end_price:
+                    self.xds[-1].extend(self.unresolved_bis)
+        else:
+            for i in range(len(self.unresolved_bis)):
+                bi_i = self.unresolved_bis[i]
+                for j in range(i + 1, len(self.unresolved_bis)):
+                    bi_j = self.unresolved_bis[j]
+                    if bi_i.direction == bi_j.direction:
+                        if bi_i.direction == Direction.Up and bi_i.end_price < bi_j.end_price:
+                            xd = XianDuan(self.unresolved_bis[i:j+1])
+                            self.xds.append(xd)
+                            self.unresolved_bis = self.unresolved_bis[j+1:]
+                        elif bi_i.direction == Direction.Down and bi_i.start_price > bi_j.start_price:
+                            xd = XianDuan(self.unresolved_bis[i:j+1])
+                            self.xds.append(xd)
+                            self.unresolved_bis = self.unresolved_bis[j+1:]
