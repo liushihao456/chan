@@ -1,7 +1,7 @@
 import os
 from dataclasses import asdict
 from math import pi
-from bokeh.models import ColumnDataSource, CrosshairTool, CustomJS, HoverTool
+from bokeh.models import ColumnDataSource, CrosshairTool, CustomJS, HoverTool, RadioButtonGroup
 from bokeh.plotting import figure, show
 from bokeh.layouts import column
 from bokeh.transform import factor_cmap
@@ -14,12 +14,12 @@ class Plot:
     def __init__(self, analyzer: ChanAnalyzer) -> None:
         self.analyzer = analyzer
         self.freqs = analyzer.freqs
-        self.ohlcv_dfs = {}
+        self.kline_dfs = {}
         self.bi_dfs = {}
         self.xd_dfs = {}
         for freq in self.freqs:
             bars = analyzer.stock.freq_bars[freq]
-            self.ohlcv_dfs[freq] = pd.DataFrame.from_records([asdict(b) for b in bars])
+            self.kline_dfs[freq] = pd.DataFrame.from_records([asdict(b) for b in bars])
             self.bi_dfs[freq] = pd.DataFrame.from_records([{'start_index': b.start_index,
                                                             'start_price': b.start_price,
                                                             'end_index': b.end_index,
@@ -51,18 +51,37 @@ class Plot:
         kline_fig.xaxis.major_label_orientation = pi / 4
         kline_fig.grid.grid_line_alpha = 0.3
 
-        df = self.ohlcv_dfs[self.freqs[0]]
-        inc = df.close > df.open
-        source = ColumnDataSource({
-            'index': df.index,
-            'dt': df.dt,
-            'open': df.open,
-            'high': df.high,
-            'low': df.low,
-            'close': df.close,
-            'volume': df.volume,
-            'inc': inc.astype(str),
-        })
+        # Here source must be a standalone object, insteading being assigned or
+        # copied from `sources', so that in the radio group callback, changing
+        # source's data will not affect the data in `sources'.
+        source = None
+        sources = {}
+        for freq in self.freqs:
+            df = self.kline_dfs[freq]
+            inc = df.close > df.open
+            source0 = ColumnDataSource({
+                'index': df.index,
+                'dt': df.dt,
+                'open': df.open,
+                'high': df.high,
+                'low': df.low,
+                'close': df.close,
+                'volume': df.volume,
+                'inc': inc.astype(str),
+            })
+            sources[str(freq.value)] = source0
+            if freq == self.freqs[0]:
+                source = ColumnDataSource({
+                    'index': df.index,
+                    'dt': df.dt,
+                    'open': df.open,
+                    'high': df.high,
+                    'low': df.low,
+                    'close': df.close,
+                    'volume': df.volume,
+                    'inc': inc.astype(str),
+                })
+
         bull_bear_cmap = factor_cmap('inc', palette=[self.bull_color, self.bear_color],
                                      factors=['True', 'False'])
         w = 0.6
@@ -111,24 +130,25 @@ class Plot:
                     ('Volume', '@volume'),
                 ],
                 formatters= {
-                    '@dt': 'Datetime',
+                    '@dt': 'datetime',
                 },
                 mode='vline',
                 renderers=[kline_seg]
             )
         )
 
-        # vol_fig.add_tools(
-        #     HoverTool(
-        #         tooltips=[
-        #             ('Datetime', '@dt{%F %T}'),
-        #             ('Volume', '@volume'),
-        #         ],
-        #         formatters= {
-        #             '@dt': 'datetime',
-        #         },
-        #         mode='vline'
-        #     )
-        # )
+        # Add radio buttons to select frequencies
+        radio_group_labels = [str(f.value) for f in self.freqs]
+        radio_group = RadioButtonGroup(labels=radio_group_labels, active=0)
+        radio_group.js_on_change('active',
+                                 CustomJS(args=dict(labels=radio_group_labels, sources=sources, source=source),
+                                          code="""
+                                          // Get the current data source
+                                          var current_source = sources[labels[cb_obj.active]];
+    
+                                          // Update the data source of the plot
+                                          source.data = current_source.data;
+                                          source.change.emit();
+                                          """))
 
-        show(column([kline_fig, vol_fig], sizing_mode='stretch_both'))
+        show(column([radio_group, kline_fig, vol_fig], sizing_mode='stretch_both'))
