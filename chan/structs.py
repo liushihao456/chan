@@ -166,74 +166,59 @@ class Bi:
             return f'Bi Down from {self.start_dt} ({self.start_price}) to {self.end_dt} ({self.end_price})'
 
 
-class XianDuan:
-    bis: list[Bi]
+class ZouShi:
+    sub_zs: list
 
-    def __init__(self, bis: list[Bi]):
-        self.bis = bis
+    def __init__(self, sub_zs: list):
+        self.sub_zs = sub_zs
 
-    def extend(self, bis: list[Bi]):
-        self.bis.extend(bis)
-
-    @property
-    def start_bi(self) -> Bi:
-        return self.bis[0]
+    def extend(self, sub_zs: list):
+        self.sub_zs.extend(sub_zs)
 
     @property
-    def end_bi(self) -> Bi:
-        return self.bis[-1]
+    def start_sub_zs(self):
+        return self.sub_zs[0]
+
+    @property
+    def end_sub_zs(self):
+        return self.sub_zs[-1]
 
     @property
     def start_index(self) -> int:
-        return self.bis[0].start_index
+        return self.sub_zs[0].start_index
 
     @property
     def end_index(self) -> int:
-        return self.bis[-1].end_index
+        return self.sub_zs[-1].end_index
 
     @property
     def start_dt(self) -> datetime:
-        return self.bis[0].start_dt
+        return self.sub_zs[0].start_dt
 
     @property
     def end_dt(self) -> datetime:
-        return self.bis[-1].end_dt
+        return self.sub_zs[-1].end_dt
 
     @property
     def start_price(self) -> float:
-        return self.start_bi.start_price
+        return self.start_sub_zs.start_price
 
     @property
     def end_price(self) -> float:
-        return self.end_bi.end_price
+        return self.end_sub_zs.end_price
 
     @property
     def direction(self) -> Direction:
-        return self.start_bi.direction
+        return self.start_sub_zs.direction
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __str__(self) -> str:
         if self.direction == Direction.Up:
-            return f'Xianduan Up from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
+            return f'Zoushi Up from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
         else:
-            return f'Xianduan Down from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
-
-
-class ZouShi:
-    xds: list[XianDuan]
-    start_xd: XianDuan
-    end_xd: XianDuan
-    start_dt: datetime
-    end_dt: datetime
-
-    def __init__(self, xds: list[XianDuan]):
-        self.xds = xds
-        self.start_xd = xds[0]
-        self.end_xd = xds[-1]
-        self.start_dt = xds[0].start_dt
-        self.end_dt = xds[-1].end_dt
+            return f'Zoushi Down from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
 
 
 class ZhongShu:

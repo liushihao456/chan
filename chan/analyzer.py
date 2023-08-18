@@ -10,7 +10,7 @@ from chan.structs import (
     ExclusiveBar,
     FenXing,
     Freq,
-    XianDuan,
+    ZouShi,
     ZhongShu,
 )
 
@@ -137,8 +137,9 @@ class ChanAnalyzer:
     freqs: list[Freq]
     fxs: list[FenXing]
     bis: list[Bi]
-    xds: list[XianDuan]
-    zss: list[ZhongShu]
+    xds: list[ZouShi]
+    zoushis: dict[Freq, list[ZouShi]]
+    unresolved_zoushis: dict[Freq, list[ZouShi]]
 
     def __init__(self, stock: Stock):
         self.stock = stock
@@ -150,13 +151,21 @@ class ChanAnalyzer:
         self.unresolved_bis = []
         self.xds = []
         self.unresolved_xds = []
-        self.zss = []
+        self.zoushis = {}
+        self.unresolved_zoushis = {}
+        for f in self.freqs:
+            self.zoushis[f] = []
+            self.unresolved_zoushis[f] = []
 
     def update(self):
         self.check_exclusive_bar()
         self.check_fx()
         self.check_bi()
-        self.check_xd()
+        self.construct_zoushi(self.unresolved_bis, self.xds, self.unresolved_xds)
+        for i in range(len(self.freqs)):
+            f = self.freqs[i]
+            a = self.unresolved_xds if i == 0 else self.unresolved_zoushis[self.freqs[i-1]]
+            self.construct_zoushi(a, self.zoushis[f], self.unresolved_zoushis[f])
 
     def exclude(self, bar1: ExclusiveBar, bar2: ExclusiveBar | Bar, bar3: Bar = None):
         if bar3 is None:
@@ -285,44 +294,47 @@ class ChanAnalyzer:
                             self.unresolved_fxs = self.unresolved_fxs[j+1:]
                             return
 
-    def check_xd(self):
-        if len(self.bis) < 3:
-            return
-        if self.xds and self.unresolved_bis:
-            xd1 = self.xds[-1]
-            bi1 = self.unresolved_bis[-1]
+    def construct_zoushi(self, zs_lower_unresolved: list, zs_higher: list, zs_higher_unresolved: list):
+        if zs_higher and zs_lower_unresolved:
+            xd1 = zs_higher[-1]
+            bi1 = zs_lower_unresolved[-1]
             if bi1.direction == xd1.direction:
                 if xd1.direction == Direction.Up and bi1.start_price >= xd1.start_price and bi1.end_price >= xd1.end_price:
-                    xd1.extend(self.unresolved_bis)
-                    self.unresolved_bis.clear()
+                    xd1.extend(zs_lower_unresolved)
+                    zs_lower_unresolved.clear()
                 elif xd1.direction == Direction.Down and bi1.start_price <= xd1.start_price and bi1.end_price <= xd1.end_price:
-                    xd1.extend(self.unresolved_bis)
-                    self.unresolved_bis.clear()
-            elif len(self.unresolved_bis) > 1 and len(self.unresolved_bis) % 2 == 1:
-                bi0 = self.unresolved_bis[0]
+                    xd1.extend(zs_lower_unresolved)
+                    zs_lower_unresolved.clear()
+            elif len(zs_lower_unresolved) > 1 and len(zs_lower_unresolved) % 2 == 1:
+                bi0 = zs_lower_unresolved[0]
                 if xd1.direction == Direction.Up and bi1.start_price < bi0.start_price \
                    and bi1.end_price < bi0.end_price:
-                    xd = XianDuan(self.unresolved_bis[:])
-                    self.xds.append(xd)
-                    self.unresolved_bis.clear()
+                    xd = ZouShi(zs_lower_unresolved[:])
+                    zs_higher.append(xd)
+                    zs_higher_unresolved.append(xd)
+                    zs_lower_unresolved.clear()
                 elif xd1.direction == Direction.Down and bi1.start_price > bi0.start_price \
                    and bi1.end_price > bi0.end_price:
-                    xd = XianDuan(self.unresolved_bis[:])
-                    self.xds.append(xd)
-                    self.unresolved_bis.clear()
-        elif not self.xds:
-            for i in range(len(self.unresolved_bis)):
-                bi_i = self.unresolved_bis[i]
-                for j in range(i + 1, len(self.unresolved_bis)):
-                    bi_j = self.unresolved_bis[j]
+                    xd = ZouShi(zs_lower_unresolved[:])
+                    zs_higher.append(xd)
+                    zs_higher_unresolved.append(xd)
+                    zs_lower_unresolved.clear()
+        elif not zs_higher:
+            for i in range(len(zs_lower_unresolved)):
+                bi_i = zs_lower_unresolved[i]
+                for j in range(i + 1, len(zs_lower_unresolved)):
+                    bi_j = zs_lower_unresolved[j]
                     if bi_i.direction == bi_j.direction:
                         if bi_i.direction == Direction.Up and bi_i.end_price < bi_j.end_price:
-                            xd = XianDuan(self.unresolved_bis[i:j+1])
-                            self.xds.append(xd)
-                            self.unresolved_bis = self.unresolved_bis[j+1:]
+                            xd = ZouShi(zs_lower_unresolved[i:j+1])
+                            zs_higher.append(xd)
+                            zs_higher_unresolved.append(xd)
+                            zs_lower_unresolved = zs_lower_unresolved[j+1:]
                             return
                         elif bi_i.direction == Direction.Down and bi_i.start_price > bi_j.start_price:
-                            xd = XianDuan(self.unresolved_bis[i:j+1])
-                            self.xds.append(xd)
-                            self.unresolved_bis = self.unresolved_bis[j+1:]
+                            xd = ZouShi(zs_lower_unresolved[i:j+1])
+                            zs_higher.append(xd)
+                            zs_higher_unresolved.append(xd)
+                            zs_lower_unresolved = zs_lower_unresolved[j+1:]
                             return
+
