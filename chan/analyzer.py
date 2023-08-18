@@ -10,8 +10,8 @@ from chan.structs import (
     ExclusiveBar,
     FenXing,
     Freq,
-    ZouShi,
     ZhongShu,
+    XianDuan,
 )
 
 
@@ -98,34 +98,32 @@ class Stock:
     def step(self):
         bar = self.stock_sub.get()
         self.freq_bars[self.freqs[0]].append(bar)
-        f1 = self.freqs[0]
         for i in range(1, len(self.freqs)):
+            f1 = self.freqs[i-1]
             f = self.freqs[i]
             self.freq_counters[f] += 1
             if self.freq_counters[f] == 1:
                 # Create an f-bar
-                self.freq_bars[f].append(Bar(
-                    open=self.freq_bars[f1][-1].open,
-                    high=self.freq_bars[f1][-1].high,
-                    low=self.freq_bars[f1][-1].low,
-                    close=self.freq_bars[f1][-1].close,
-                    volume=self.freq_bars[f1][-1].volume,
-                    turnover=self.freq_bars[f1][-1].turnover,
-                    num_trades=self.freq_bars[f1][-1].num_trades,
-                    dt=self.freq_bars[f1][-1].dt,
+                b = Bar(
+                    open=bar.open,
+                    high=bar.high,
+                    low=bar.low,
+                    close=bar.close,
+                    volume=bar.volume,
+                    turnover=bar.turnover,
+                    num_trades=bar.num_trades,
+                    dt=bar.dt,
                     freq=f,
-                    index=len(self.freq_bars)
-                ))
+                    index=len(self.freq_bars[f])
+                )
+                self.freq_bars[f].append(b)
+                self.freq_bars[f1][-1].bar_upper_level = b
             else:
                 fbar = self.freq_bars[f][-1]
-                f1bar = self.freq_bars[f1][-1]
-                fbar.high = max(fbar.high, f1bar.high)
-                fbar.low = min(fbar.low, f1bar.low)
-                fbar.close = f1bar.close
-                fbar.volume = fbar.volume + f1bar.volume
-                fbar.turnover = fbar.turnover + f1bar.turnover
-                fbar.num_trades = fbar.num_trades + f1bar.num_trades
-            if self.freq_counters[f] == f.value / f1.value:
+                fbar.extend_with_sub_bar(bar)
+                self.freq_bars[f1][-1].bar_upper_level = fbar
+
+            if self.freq_counters[f] == f.value / self.freqs[0].value:
                 self.freq_counters[f] = 0
 
     def __getitem__(self, freq: Freq) -> list[Bar]:
@@ -137,9 +135,7 @@ class ChanAnalyzer:
     freqs: list[Freq]
     fxs: list[FenXing]
     bis: list[Bi]
-    xds: list[ZouShi]
-    zoushis: dict[Freq, list[ZouShi]]
-    unresolved_zoushis: dict[Freq, list[ZouShi]]
+    xds: dict[Freq, list[XianDuan]]
 
     def __init__(self, stock: Stock):
         self.stock = stock
@@ -149,25 +145,23 @@ class ChanAnalyzer:
         self.unresolved_fxs = []
         self.bis = []
         self.unresolved_bis = []
-        self.xds = []
-        self.unresolved_xds = []
-        self.zoushis = {}
-        self.unresolved_zoushis = {}
+        self.xds = {}
+        self.unresolved_xds = {}
         for f in self.freqs:
-            self.zoushis[f] = []
-            self.unresolved_zoushis[f] = []
+            self.xds[f] = []
+            self.unresolved_xds[f] = []
 
     def update(self):
         self.check_exclusive_bar()
         self.check_fx()
         self.check_bi()
-        self.construct_zoushi(self.unresolved_bis, self.xds, self.unresolved_xds)
+        # Treating Xianduan's frequency to be the same as 1-min ZouShi
         for i in range(len(self.freqs)):
             f = self.freqs[i]
-            a = self.unresolved_xds if i == 0 else self.unresolved_zoushis[self.freqs[i-1]]
-            self.construct_zoushi(a, self.zoushis[f], self.unresolved_zoushis[f])
+            a = self.unresolved_bis if i == 0 else self.unresolved_xds[self.freqs[i-1]]
+            self.construct_xd(a, self.xds[f], self.unresolved_xds[f], self.freqs[i])
 
-    def exclude(self, bar1: ExclusiveBar, bar2: ExclusiveBar | Bar, bar3: Bar = None):
+    def exclude(self, bar1: ExclusiveBar, bar2: Bar, bar3: Bar = None):
         if bar3 is None:
             if (bar1.high >= bar2.high and bar1.low <= bar2.low) or \
                (bar2.high >= bar1.high and bar2.low <= bar1.low):
@@ -294,7 +288,7 @@ class ChanAnalyzer:
                             self.unresolved_fxs = self.unresolved_fxs[j+1:]
                             return
 
-    def construct_zoushi(self, zs_lower_unresolved: list, zs_higher: list, zs_higher_unresolved: list):
+    def construct_xd(self, zs_lower_unresolved: list, zs_higher: list, zs_higher_unresolved: list, freq: Freq):
         if zs_higher and zs_lower_unresolved:
             xd1 = zs_higher[-1]
             bi1 = zs_lower_unresolved[-1]
@@ -309,13 +303,13 @@ class ChanAnalyzer:
                 bi0 = zs_lower_unresolved[0]
                 if xd1.direction == Direction.Up and bi1.start_price < bi0.start_price \
                    and bi1.end_price < bi0.end_price:
-                    xd = ZouShi(zs_lower_unresolved[:])
+                    xd = XianDuan(zs_lower_unresolved[:], freq)
                     zs_higher.append(xd)
                     zs_higher_unresolved.append(xd)
                     zs_lower_unresolved.clear()
                 elif xd1.direction == Direction.Down and bi1.start_price > bi0.start_price \
                    and bi1.end_price > bi0.end_price:
-                    xd = ZouShi(zs_lower_unresolved[:])
+                    xd = XianDuan(zs_lower_unresolved[:], freq)
                     zs_higher.append(xd)
                     zs_higher_unresolved.append(xd)
                     zs_lower_unresolved.clear()
@@ -325,14 +319,16 @@ class ChanAnalyzer:
                 for j in range(i + 1, len(zs_lower_unresolved)):
                     bi_j = zs_lower_unresolved[j]
                     if bi_i.direction == bi_j.direction:
-                        if bi_i.direction == Direction.Up and bi_i.end_price < bi_j.end_price:
-                            xd = ZouShi(zs_lower_unresolved[i:j+1])
+                        if bi_i.direction == Direction.Up and bi_i.start_price < bi_j.start_price \
+                           and bi_i.end_price < bi_j.end_price:
+                            xd = XianDuan(zs_lower_unresolved[i:j+1], freq)
                             zs_higher.append(xd)
                             zs_higher_unresolved.append(xd)
                             zs_lower_unresolved = zs_lower_unresolved[j+1:]
                             return
-                        elif bi_i.direction == Direction.Down and bi_i.start_price > bi_j.start_price:
-                            xd = ZouShi(zs_lower_unresolved[i:j+1])
+                        elif bi_i.direction == Direction.Down and bi_i.start_price > bi_j.start_price \
+                             and bi_i.end_price > bi_j.end_price:
+                            xd = XianDuan(zs_lower_unresolved[i:j+1], freq)
                             zs_higher.append(xd)
                             zs_higher_unresolved.append(xd)
                             zs_lower_unresolved = zs_lower_unresolved[j+1:]

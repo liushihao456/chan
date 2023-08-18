@@ -17,17 +17,25 @@ class Plot:
         self.kline_dfs = {}
         self.bi_dfs = {}
         self.xd_dfs = {}
-        for freq in self.freqs:
+        self.sub_xd_dfs = {}
+        for i in range(len(self.freqs)):
+            freq = self.freqs[i]
             bars = analyzer.stock.freq_bars[freq]
             self.kline_dfs[freq] = pd.DataFrame.from_records([asdict(b) for b in bars])
-            self.bi_dfs[freq] = pd.DataFrame.from_records([{'start_index': b.start_index,
-                                                            'start_price': b.start_price,
-                                                            'end_index': b.end_index,
-                                                            'end_price': b.end_price} for b in analyzer.bis])
+            if i == 0:
+                self.sub_xd_dfs[freq] = pd.DataFrame.from_records([{'start_index': b.start_index,
+                                                                    'start_price': b.start_price,
+                                                                    'end_index': b.end_index,
+                                                                    'end_price': b.end_price} for b in analyzer.bis])
+            else:
+                self.sub_xd_dfs[freq] = pd.DataFrame.from_records([{'start_index': b.start_index_of_freq(freq),
+                                                                    'start_price': b.start_price,
+                                                                    'end_index': b.end_index_of_freq(freq),
+                                                                    'end_price': b.end_price} for b in analyzer.xds[self.freqs[i-1]]])
             self.xd_dfs[freq] = pd.DataFrame.from_records([{'start_index': xd.start_index,
                                                             'start_price': xd.start_price,
                                                             'end_index': xd.end_index,
-                                                            'end_price': xd.end_price} for xd in analyzer.xds])
+                                                            'end_price': xd.end_price} for xd in analyzer.xds[freq]])
 
         self.bull_color = '#D5E1DD'
         self.bear_color = '#F2583E'
@@ -45,11 +53,6 @@ class Plot:
             'active_drag': 'xpan',
             'active_scroll': 'xwheel_zoom'
         }
-
-        kline_fig = figure(y_axis_label='Candlestick', **tools_kwargs)
-        kline_fig.sizing_mode = 'stretch_both'
-        kline_fig.xaxis.major_label_orientation = pi / 4
-        kline_fig.grid.grid_line_alpha = 0.3
 
         # Here source must be a standalone object, insteading being assigned or
         # copied from `sources', so that in the radio group callback, changing
@@ -82,17 +85,59 @@ class Plot:
                     'inc': inc.astype(str),
                 })
 
+        # Same for XianDuans
+        xd_source = None
+        xd_sources = {}
+        for freq in self.freqs:
+            df = self.xd_dfs[freq]
+            xd_source0 = ColumnDataSource({
+                'start_index': df.start_index if len(df) > 0 else [],
+                'start_price': df.start_price if len(df) > 0 else [],
+                'end_index': df.end_index if len(df) > 0 else [],
+                'end_price': df.end_price if len(df) > 0 else [],
+            })
+            xd_sources[str(freq.value)] = xd_source0
+            if freq == self.freqs[0]:
+                xd_source = ColumnDataSource({
+                    'start_index': df.start_index if len(df) > 0 else [],
+                    'start_price': df.start_price if len(df) > 0 else [],
+                    'end_index': df.end_index if len(df) > 0 else [],
+                    'end_price': df.end_price if len(df) > 0 else [],
+                })
+
+        # Same for sub XianDuans
+        sub_xd_source = None
+        sub_xd_sources = {}
+        for freq in self.freqs:
+            df = self.sub_xd_dfs[freq]
+            sub_xd_source0 = ColumnDataSource({
+                'start_index': df.start_index if len(df) > 0 else [],
+                'start_price': df.start_price if len(df) > 0 else [],
+                'end_index': df.end_index if len(df) > 0 else [],
+                'end_price': df.end_price if len(df) > 0 else [],
+            })
+            sub_xd_sources[str(freq.value)] = sub_xd_source0
+            if freq == self.freqs[0]:
+                sub_xd_source = ColumnDataSource({
+                    'start_index': df.start_index if len(df) > 0 else [],
+                    'start_price': df.start_price if len(df) > 0 else [],
+                    'end_index': df.end_index if len(df) > 0 else [],
+                    'end_price': df.end_price if len(df) > 0 else [],
+                })
+
+        kline_fig = figure(y_axis_label='Candlestick', **tools_kwargs)
+        kline_fig.sizing_mode = 'stretch_both'
+        kline_fig.xaxis.major_label_orientation = pi / 4
+        kline_fig.grid.grid_line_alpha = 0.3
+
         bull_bear_cmap = factor_cmap('inc', palette=[self.bull_color, self.bear_color],
                                      factors=['True', 'False'])
         w = 0.6
         kline_seg = kline_fig.segment('index', 'high', 'index', 'low', color='black', source=source)
         kline_fig.vbar('index', w, 'open', 'close', line_color='black', fill_color=bull_bear_cmap, source=source)
 
-        bi_df = self.bi_dfs[self.freqs[0]]
-        kline_fig.segment(bi_df.start_index, bi_df.start_price, bi_df.end_index, bi_df.end_price, color='red')
-
-        xd_df = self.xd_dfs[self.freqs[0]]
-        kline_fig.segment(xd_df.start_index, xd_df.start_price, xd_df.end_index, xd_df.end_price, color='blue')
+        kline_fig.segment('start_index', 'start_price', 'end_index', 'end_price', color='blue', source=xd_source)
+        kline_fig.segment('start_index', 'start_price', 'end_index', 'end_price', color='red', source=sub_xd_source)
 
         vol_fig = figure(y_axis_label='Volume', height=200, x_range=kline_fig.x_range, **tools_kwargs)
         vol_fig.sizing_mode = 'stretch_width'
@@ -141,7 +186,9 @@ class Plot:
         radio_group_labels = [str(f.value) for f in self.freqs]
         radio_group = RadioButtonGroup(labels=radio_group_labels, active=0)
         radio_group.js_on_change('active',
-                                 CustomJS(args=dict(labels=radio_group_labels, sources=sources, source=source),
+                                 CustomJS(args=dict(labels=radio_group_labels, sources=sources, source=source,
+                                                    xd_sources=xd_sources, xd_source=xd_source,
+                                                    sub_xd_sources=sub_xd_sources, sub_xd_source=sub_xd_source),
                                           code="""
                                           // Get the current data source
                                           var current_source = sources[labels[cb_obj.active]];
@@ -149,6 +196,16 @@ class Plot:
                                           // Update the data source of the plot
                                           source.data = current_source.data;
                                           source.change.emit();
+
+                                          // Same for XianDuans
+                                          var current_xd_source = xd_sources[labels[cb_obj.active]];
+                                          xd_source.data = current_xd_source.data;
+                                          xd_source.change.emit();
+
+                                          // Same for sub XianDuans
+                                          var current_sub_xd_source = sub_xd_sources[labels[cb_obj.active]];
+                                          sub_xd_source.data = current_sub_xd_source.data;
+                                          sub_xd_source.change.emit();
                                           """))
 
         show(column([radio_group, kline_fig, vol_fig], sizing_mode='stretch_both'))

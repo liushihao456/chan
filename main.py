@@ -2,8 +2,9 @@ from chan.analyzer import ChanAnalyzer, Stock, StockSubscribeCsv
 from chan.plot import Plot
 from chan.structs import Freq
 
-stocksub = StockSubscribeCsv('./data/300340.csv', '20230306')
-stock = Stock(stocksub, [Freq.F1, Freq.F5])
+stocksub = StockSubscribeCsv('./data/300340.csv', '20230301')
+stock = Stock(stocksub, [Freq.F1, Freq.F5, Freq.F30])
+# stock = Stock(stocksub, [Freq.F1, Freq.F5])
 analyzer = ChanAnalyzer(stock)
 
 n = 0

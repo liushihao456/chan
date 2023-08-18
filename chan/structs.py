@@ -33,6 +33,15 @@ class Bar:
     dt: datetime
     freq: Freq
     index: int
+    bar_upper_level: "Bar" = None
+
+    def extend_with_sub_bar(self, bar: "Bar"):
+        self.high = max(self.high, bar.high)
+        self.low = min(self.low, bar.low)
+        self.close = bar.close
+        self.volume = self.volume + bar.volume
+        self.turnover = self.turnover + bar.turnover
+        self.num_trades = self.num_trades + bar.num_trades
 
 
 class ExclusiveBar(Bar):
@@ -71,6 +80,7 @@ class FenXing:
     direction: Direction
     low: float
     high: float
+    vertex_bar: Bar
     start_dt: datetime
     end_dt: datetime
     dt: datetime
@@ -87,6 +97,7 @@ class FenXing:
             self.high = exbars[1].high
             for b in exbars[1].bars:
                 if b.high == self.high:
+                    self.vertex_bar = b
                     self.index = b.index
                     self.dt = b.dt
                     break
@@ -95,6 +106,7 @@ class FenXing:
             self.low = exbars[1].low
             for b in exbars[1].bars:
                 if b.low == self.low:
+                    self.vertex_bar = b
                     self.index = b.index
                     self.dt = b.dt
                     break
@@ -125,6 +137,14 @@ class Bi:
     @property
     def direction(self) -> Direction:
         return self.end_fx.direction
+
+    @property
+    def start_bar(self) -> Bar:
+        return self.start_fx.vertex_bar
+
+    @property
+    def end_bar(self) -> Bar:
+        return self.end_fx.vertex_bar
 
     @property
     def start_index(self) -> int:
@@ -166,69 +186,115 @@ class Bi:
             return f'Bi Down from {self.start_dt} ({self.start_price}) to {self.end_dt} ({self.end_price})'
 
 
-class ZouShi:
-    sub_zs: list
+class XianDuan:
+    sub_xd: list
+    freq: Freq
 
-    def __init__(self, sub_zs: list):
-        self.sub_zs = sub_zs
+    def __init__(self, sub_xd: list, freq: Freq):
+        self.sub_xd = sub_xd
+        self.freq = freq
 
-    def extend(self, sub_zs: list):
-        self.sub_zs.extend(sub_zs)
+    def extend(self, sub_xd: list):
+        self.sub_xd.extend(sub_xd)
+
+    def start_bar_of_freq(self, freq: Freq) -> Bar:
+        b0 = self.start_sub_xd.start_bar
+        if b0.freq == freq:
+            return b0
+        else:
+            b1 = b0.bar_upper_level
+            while b1 is not None:
+                print(f'b1: {b1}')
+                print(f'b0: {b0}')
+                if b1.freq == freq:
+                    return b1
+                if b1.bar_upper_level is None:
+                    return b1
+                b1 = b1.bar_upper_level
+            return b1
+
+    def end_bar_of_freq(self, freq: Freq) -> Bar:
+        b0 = self.end_sub_xd.end_bar
+        if b0.freq == freq:
+            return b0
+        else:
+            b1 = b0.bar_upper_level
+            while b1 is not None:
+                if b1.freq == freq:
+                    return b1
+                if b1.bar_upper_level is None:
+                    return b1
+                b1 = b1.bar_upper_level
+            return b1
 
     @property
-    def start_sub_zs(self):
-        return self.sub_zs[0]
+    def start_bar(self) -> Bar:
+        return self.start_bar_of_freq(self.freq)
 
     @property
-    def end_sub_zs(self):
-        return self.sub_zs[-1]
+    def end_bar(self) -> Bar:
+        return self.end_bar_of_freq(self.freq)
+
+    @property
+    def start_sub_xd(self):
+        return self.sub_xd[0]
+
+    @property
+    def end_sub_xd(self):
+        return self.sub_xd[-1]
 
     @property
     def start_index(self) -> int:
-        return self.sub_zs[0].start_index
+        return self.start_bar.index
 
     @property
     def end_index(self) -> int:
-        return self.sub_zs[-1].end_index
+        return self.end_bar.index
+
+    def start_index_of_freq(self, freq: Freq) -> int:
+        return self.start_bar_of_freq(freq).index
+
+    def end_index_of_freq(self, freq: Freq) -> int:
+        return self.end_bar_of_freq(freq).index
 
     @property
     def start_dt(self) -> datetime:
-        return self.sub_zs[0].start_dt
+        return self.sub_xd[0].start_dt
 
     @property
     def end_dt(self) -> datetime:
-        return self.sub_zs[-1].end_dt
+        return self.sub_xd[-1].end_dt
 
     @property
     def start_price(self) -> float:
-        return self.start_sub_zs.start_price
+        return self.start_sub_xd.start_price
 
     @property
     def end_price(self) -> float:
-        return self.end_sub_zs.end_price
+        return self.end_sub_xd.end_price
 
     @property
     def direction(self) -> Direction:
-        return self.start_sub_zs.direction
+        return self.start_sub_xd.direction
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __str__(self) -> str:
         if self.direction == Direction.Up:
-            return f'Zoushi Up from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
+            return f'XianDuan Up from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
         else:
-            return f'Zoushi Down from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
+            return f'XianDuan Down from {self.start_index} ({self.start_price}) to {self.end_index} ({self.end_price})'
 
 
 class ZhongShu:
-    zss: list[ZouShi]
-    start_zs: ZouShi
-    end_zs: ZouShi
+    zss: list[XianDuan]
+    start_zs: XianDuan
+    end_zs: XianDuan
     start_dt: datetime
     end_dt: datetime
 
-    def __init__(self, zss: list[ZouShi]) -> None:
+    def __init__(self, zss: list[XianDuan]) -> None:
         self.zss = zss
         self.start_zs = zss[0]
         self.end_zs = zss[-1]
