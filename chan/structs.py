@@ -204,8 +204,6 @@ class XianDuan:
         else:
             b1 = b0.bar_upper_level
             while b1 is not None:
-                print(f'b1: {b1}')
-                print(f'b0: {b0}')
                 if b1.freq == freq:
                     return b1
                 if b1.bar_upper_level is None:

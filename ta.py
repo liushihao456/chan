@@ -2,6 +2,11 @@ import numpy as np
 import talib
 
 
+def BBANDS(close, n_lookback, n_std):
+    upper, _, lower = talib.BBANDS(close, n_lookback, n_std, n_std, 0)
+    return upper, lower
+
+
 def SUPERTREND(high, low, close, n, m):
     atr = talib.ATR(high, low, close, n)
     is_up = close[n] > close[n - 1]
