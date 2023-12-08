@@ -10,7 +10,7 @@ const App = (props) => {
     const [started, setStarted] = useState(false);
 
     useEffect(() => {
-        read_kline_csv('./data/300340.csv', 2022106, 20221010).then((v) => series1.current.setData(v));
+        read_kline_csv('./data/300340.csv', 20221010, 20221015).then((v) => series1.current.setData(v));
     }, []);
 
     useEffect(() => {

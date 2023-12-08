@@ -25,11 +25,15 @@ export const ChartContainer = forwardRef((props, ref) => {
                     height: container.clientHeight,
                     grid: {
                         vertLines: {
-                            visible: false,
+                            style: 3,
                         },
                         horzLines: {
                             visible: false,
                         },
+                    },
+                    timeScale: {
+                        timeVisible: true,
+                        secondsVisible: false,
                     },
                 });
                 this._api.timeScale().fitContent();

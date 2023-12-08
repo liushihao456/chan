@@ -1,28 +1,3 @@
-// import fs from 'fs';
-// import {parse} from 'csv-parse';
-
-function parse_csv(text) {
-    var lines = text.split('\n');
-
-    var result = [];
-
-    var headers = lines[0].split(',');
-
-    for (var i = 1; i < lines.length; i++) {
-        var obj = {};
-        var currentline = lines[i].split(',');
-        if (i == 1)
-            console.log(currentline);
-
-        for (var j = 0; j < headers.length; j++) {
-            obj[headers[j]] = currentline[j];
-        }
-
-        result.push(obj);
-    }
-
-    return result;
-}
 
 export async function read_kline_csv(fname, start_date, end_date) {
     const res = await fetch(fname);
@@ -56,9 +31,6 @@ export async function read_kline_csv(fname, start_date, end_date) {
                     minute = +l[j].substring(2, 4);
                     sec = +l[j].substring(4, 6);
                 }
-                //     obj['time'] += ` 0${l[j].substring(0, 1)}:${l[j].substring(1, 3)}:${l[j].substring(3, 5)}`;
-                // else
-                //     obj['time'] += ` ${l[j].substring(0, 2)}:${l[j].substring(2, 4)}:${l[j].substring(4, 6)}`;
             }
             if (headers[j] == 'Open')
                 obj['open'] = parseFloat(l[j]);
@@ -71,7 +43,8 @@ export async function read_kline_csv(fname, start_date, end_date) {
             if (headers[j] == 'Volume')
                 obj['volume'] = parseFloat(l[j]);
         }
-        obj['time'] = new Date(year, month - 1, day, hour, minute, sec).getTime() / 1000;
+        const t = new Date(year, month - 1, day, hour, minute, sec);
+        obj['time'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
         if ((!start_date || date >= start_date) && (!end_date || date <= end_date))
             result.push(obj);
     }
