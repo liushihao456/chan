@@ -5,7 +5,11 @@ const Context = createContext();
 
 export function Chart(props) {
     const [container, setContainer] = useState(false);
-    return <div ref={element => setContainer(element)}>{container && <ChartContainer {...props} container={container} />}</div>;
+    return (
+        <div ref={(element) => setContainer(element)} style={{ flexGrow: 1 }}>
+            {container && <ChartContainer {...props} container={container} />}
+        </div>
+    );
 }
 
 export const ChartContainer = forwardRef((props, ref) => {
@@ -18,7 +22,7 @@ export const ChartContainer = forwardRef((props, ref) => {
                     ...rest,
                     layout,
                     width: container.clientWidth,
-                    height: 300,
+                    height: container.clientHeight,
                     grid: {
                         vertLines: {
                             visible: false,
@@ -76,20 +80,13 @@ export const Series = forwardRef((props, ref) => {
         api() {
             if (!this._api) {
                 const { children, data, type, ...rest } = props;
-                if (type == 'area')
-                    this._api = parent.api().addAreaSeries(rest);
-                else if (type == 'bar')
-                    this._api = parent.api().addBarSeries(rest);
-                else if (type == 'baseline')
-                    this._api = parent.api().addBaselineSeries(rest);
-                else if (type == 'candlestick')
-                    this._api = parent.api().addCandlestickSeries(rest);
-                else if (type == 'histogram')
-                    this._api = parent.api().addHistogramSeries(rest);
-                else if (type == 'line')
-                    this._api = parent.api().addLineSeries(rest);
-                else
-                    throw Error(`${type} series is not supported.`)
+                if (type == 'area') this._api = parent.api().addAreaSeries(rest);
+                else if (type == 'bar') this._api = parent.api().addBarSeries(rest);
+                else if (type == 'baseline') this._api = parent.api().addBaselineSeries(rest);
+                else if (type == 'candlestick') this._api = parent.api().addCandlestickSeries(rest);
+                else if (type == 'histogram') this._api = parent.api().addHistogramSeries(rest);
+                else if (type == 'line') this._api = parent.api().addLineSeries(rest);
+                else throw Error(`${type} series is not supported.`);
                 this._api.setData(data);
             }
             return this._api;
