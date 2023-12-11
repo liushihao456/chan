@@ -1,4 +1,4 @@
-import { createChart } from 'lightweight-charts';
+import { createChart, CrosshairMode } from 'lightweight-charts';
 import React, { createContext, forwardRef, useContext, useEffect, useRef, useState } from 'react';
 
 const Context = createContext();
@@ -22,6 +22,9 @@ export const ChartContainer = forwardRef((props, ref) => {
                     ...rest,
                     width: container.clientWidth,
                     height: container.clientHeight,
+                    crosshair: {
+                        mode: CrosshairMode.Normal,
+                    },
                     grid: {
                         vertLines: {
                             style: 3,

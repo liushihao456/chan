@@ -3,7 +3,7 @@ import './App.css';
 import { Chart, Series } from './components/Chart';
 import './css/colors.css';
 import './css/switch.css';
-import { read_kline_csv } from './data/reader';
+import { read_kline_csv, read_trades_csv } from './data/reader';
 
 const App = () => {
     const [theme, setTheme] = useState('dark');
@@ -23,6 +23,29 @@ const App = () => {
                 })
             );
             chart.current.timeScale().fitContent();
+            const markers = [];
+            read_trades_csv(`./data/trades/trades.csv`).then((v) => {
+                v.forEach(o => {
+                    markers.push({
+                        time: o.size > 0 ? o.entryTime : o.exitTime,
+                        position: 'belowBar',
+                        color: '#FF7F7F',
+                        shape: 'arrowUp',
+                        text: 'B',
+                    });
+                    markers.push({
+                        time: o.size > 0 ? o.exitTime : o.entryTime,
+                        position: 'aboveBar',
+                        color: '#40FF3A',
+                        shape: 'arrowDown',
+                        text: 'S',
+                    });
+                });
+                console.log(v);
+                console.log(markers);
+                markers.sort((a, b) => a.time - b.time);
+                series1.current.setMarkers(markers);
+            });
         });
     }, [freq]);
 
@@ -84,8 +107,23 @@ const App = () => {
                 </div>
             </div>
             <Chart ref={chart} {...chartOptions}>
-                <Series ref={series1} type={'candlestick'} data={[]} {...klineOptions} />
-                <Series ref={series2} type={'histogram'} data={[]} priceFormat={{ type: 'volume' }} priceScaleId="" />
+                <Series
+                    ref={series1}
+                    type={'candlestick'}
+                    data={[]}
+                    lastValueVisible={false}
+                    priceLineVisible={false}
+                    {...klineOptions}
+                />
+                <Series
+                    ref={series2}
+                    type={'histogram'}
+                    data={[]}
+                    lastValueVisible={false}
+                    priceLineVisible={false}
+                    priceFormat={{ type: 'volume' }}
+                    priceScaleId=""
+                />
             </Chart>
         </div>
     );

@@ -62,3 +62,52 @@ export async function read_kline_csv(fname, start_date, end_date) {
 
     return result;
 }
+
+export async function read_trades_csv(fname) {
+    const res = await fetch(fname);
+    const text = await res.text();
+
+    const result = [];
+    const lines = text.split('\n');
+    const headers = lines[0].split(',');
+
+    for (var i = 1; i < lines.length; i++) {
+        const obj = {};
+        const l = lines[i].split(',');
+        if (l.length < headers.length)
+            continue;
+        for (var j = 0; j < headers.length; j++) {
+            if (headers[j] == 'EntryTime') {
+                let year = +l[j].substring(0, 4);
+                let month = +l[j].substring(5, 7);
+                let day = +l[j].substring(8, 10);
+                let hour = +l[j].substring(11, 13);
+                let minute = +l[j].substring(14, 16);
+                let sec = +l[j].substring(17, 19);
+                const t = new Date(year, month - 1, day, hour, minute, sec);
+                obj['entryTime'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
+            }
+            if (headers[j] == 'ExitTime') {
+                let year = +l[j].substring(0, 4);
+                let month = +l[j].substring(5, 7);
+                let day = +l[j].substring(8, 10);
+                let hour = +l[j].substring(11, 13);
+                let minute = +l[j].substring(14, 16);
+                let sec = +l[j].substring(17, 19);
+                const t = new Date(year, month - 1, day, hour, minute, sec);
+                obj['exitTime'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
+            }
+            if (headers[j] == 'Size')
+                obj['size'] = parseFloat(l[j]);
+            if (headers[j] == 'EntryPrice')
+                obj['entryPrice'] = parseFloat(l[j]);
+            if (headers[j] == 'ExitPrice')
+                obj['exitPrice'] = parseFloat(l[j]);
+            if (headers[j] == 'PnL')
+                obj['pnl'] = parseFloat(l[j]);
+        }
+        result.push(obj);
+    }
+
+    return result;
+}
