@@ -3,24 +3,23 @@ import React, { createContext, forwardRef, useContext, useEffect, useRef, useSta
 
 const Context = createContext();
 
-export function Chart(props) {
+export const Chart = forwardRef((props, ref) => {
     const [container, setContainer] = useState(false);
     return (
         <div ref={(element) => setContainer(element)} style={{ flexGrow: 1 }}>
-            {container && <ChartContainer {...props} container={container} />}
+            {container && <ChartContainer {...props} ref={ref} container={container} />}
         </div>
     );
-}
+});
 
 export const ChartContainer = forwardRef((props, ref) => {
-    const { children, container, layout, ...rest } = props;
+    const { children, container, ...rest } = props;
 
     const chartApiRef = useRef({
         api() {
             if (!this._api) {
                 this._api = createChart(container, {
                     ...rest,
-                    layout,
                     width: container.clientWidth,
                     height: container.clientHeight,
                     grid: {
@@ -65,25 +64,30 @@ export const ChartContainer = forwardRef((props, ref) => {
         };
     }, []);
 
+    // useEffect(() => {
+    //     // if (theme == 'dark') {
+    //     //     chartApiRef.current.api().priceScale().applyOptions({borderColor: '#71649C'});
+    //     //     chartApiRef.current.api().timeScale().applyOptions({borderColor: '#71649C'});
+    //     // }
+    // }, [theme]);
+
     useEffect(() => {
-        chartApiRef.current.api().applyOptions(rest);
         if (ref) ref.current = chartApiRef.current.api();
     }, []);
 
     useEffect(() => {
-        chartApiRef.current.api().applyOptions({ layout });
-    }, [layout]);
+        chartApiRef.current.api().applyOptions(rest);
+    }, [rest]);
 
     return <Context.Provider value={chartApiRef.current}>{props.children}</Context.Provider>;
 });
-ChartContainer.displayName = 'ChartContainer';
 
 export const Series = forwardRef((props, ref) => {
+    const { children, data, type, ...rest } = props;
     const parent = useContext(Context);
     const seriesRef = useRef({
         api() {
             if (!this._api) {
-                const { children, data, type, ...rest } = props;
                 if (type == 'area') this._api = parent.api().addAreaSeries(rest);
                 else if (type == 'bar') this._api = parent.api().addBarSeries(rest);
                 else if (type == 'baseline') this._api = parent.api().addBaselineSeries(rest);
@@ -91,6 +95,20 @@ export const Series = forwardRef((props, ref) => {
                 else if (type == 'histogram') this._api = parent.api().addHistogramSeries(rest);
                 else if (type == 'line') this._api = parent.api().addLineSeries(rest);
                 else throw Error(`${type} series is not supported.`);
+                if (
+                    type == 'histogram' &&
+                    rest.priceFormat &&
+                    rest.priceFormat.type &&
+                    rest.priceFormat.type == 'volume'
+                ) {
+                    this._api.priceScale().applyOptions({
+                        // set the positioning of the volume series
+                        scaleMargins: {
+                            top: 0.8, // highest point of the series will be 80% away from the top
+                            bottom: 0,
+                        },
+                    });
+                }
                 this._api.setData(data);
             }
             return this._api;
@@ -104,13 +122,14 @@ export const Series = forwardRef((props, ref) => {
 
     useEffect(() => {
         const series = seriesRef.current;
-        const { children, data, ...rest } = props;
-        series.api().applyOptions(rest);
         if (ref) ref.current = series.api();
 
         return () => series.free();
     }, []);
 
+    useEffect(() => {
+        seriesRef.current.api().applyOptions(rest);
+    }, [rest]);
+
     return <Context.Provider value={seriesRef.current}>{props.children}</Context.Provider>;
 });
-Series.displayName = 'Series';

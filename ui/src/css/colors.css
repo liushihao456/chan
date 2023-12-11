@@ -1,0 +1,60 @@
+.theme-light {
+    color-scheme                   : light;
+    --color-buttonbg               : rgb(238, 238, 238);
+    --color                        : rgb(56, 56, 56);
+    --color-disabled               : rgb(204, 204, 204);
+    --color-bg                     : rgb(255, 255, 255);
+    --color-bg2                    : rgb(241, 241, 241);
+    --color-bg3                    : rgb(234, 234, 234);
+    --color-bg4                    : rgb(218, 218, 218);
+    --color-bg5                    : rgb(183, 183, 183);
+    --color-border                 : rgb(240, 240, 240);
+    --color-border2                : rgb(225, 225, 225);
+    --color-border3                : rgb(210, 210, 210);
+    --color-border4                : rgb(195, 195, 195);
+    --color-border5                : rgb(154, 154, 154);
+    --color-buttonborder           : #8A8A8A;
+    --color-hoverbg                : rgba(195, 195, 195, 0.8);
+    --color-activebg               : rgb(170, 170, 170);
+    /* --color-panel-department-bg : #CCC8C5; */
+    --color-panel-machine-block-bg : #99998B;
+    --color-tip-bg                 : rgba(255, 255, 255, 0.8);
+    --color-tr-waiting             : rgb(144, 242, 255);
+    --color-tr-finished            : rgb(144, 255, 161);
+    --color-tr-inproduction        : rgb(223, 223, 223);
+    --color-progress-bar           : rgb(134, 134, 134);
+    --color-error                  : red;
+    --color-bg3-alpha              : rgb(234, 234, 234, 0.5);
+}
+
+.theme-dark {
+    color-scheme                   : dark;
+    --color-buttonbg               : rgb(45, 51, 78);
+    --color-activebg               : rgb(170, 170, 170);
+    --color                        : rgb(193, 196, 204);
+    --color-bg                     : rgb(17, 26, 54);
+    --color-bg2                    : rgb(29, 48, 74);
+    --color-bg3                    : rgb(38, 58, 86);
+    --color-bg4                    : rgb(44, 62, 90);
+    --color-bg5                    : rgb(62, 87, 128);
+    --color-border                 : rgb(25, 45, 97);
+    --color-border2                : rgb(51, 67, 109);
+    --color-border3                : rgb(81, 98, 142);
+    --color-border4                : rgb(117, 128, 158);
+    --color-border5                : rgb(132, 139, 156);
+    --color-disabled               : rgb(102, 105, 113);
+    --color-hoverbg                : rgba(255, 255, 255, 0.2);
+    --color-buttonborder           : rgb(93, 96, 105);
+    --color-header                 : rgb(207, 212, 224);
+    /* --color-panel-department-bg : rgb(42, 49, 74); */
+    /* --color-panel-department-bg : rgba(255, 255, 255, 0.1); */
+    --color-panel-machine-block-bg : rgba(255, 255, 255, 0.2);
+    --color-tip-bg                 : rgba(17, 26, 54, 0.8);
+    --color-tr-waiting             : rgb(25, 72, 125);
+    --color-tr-finished            : rgb(77, 115, 78);
+    --color-tr-inproduction        : rgb(115, 99, 2);
+    --color-progress-bar           : var(--color);
+    --color-error                  : red;
+    --color-bg3-alpha              : rgb(38, 58, 86, 0.5);
+}
+   

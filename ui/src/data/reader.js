@@ -14,6 +14,17 @@ export async function read_kline_csv(fname, start_date, end_date) {
             continue;
         let date = 0, year = 0, month = 0, day = 0, hour = 0, minute = 0, sec = 0;
         for (var j = 0; j < headers.length; j++) {
+            if (headers[j] == 'date_time') {
+                year = +l[j].substring(0, 4);
+                month = +l[j].substring(5, 7);
+                day = +l[j].substring(8, 10);
+                if (l[j].length > 10) {
+                    hour = +l[j].substring(11, 13);
+                    minute = +l[j].substring(14, 16);
+                    sec = +l[j].substring(17, 19);
+                }
+                date = year * 10000 + month * 100 + day;
+            }
             if (headers[j] == 'TradingDay') {
                 year = +l[j].substring(0, 4);
                 month = +l[j].substring(4, 6);

@@ -1,0 +1,44 @@
+.switch {
+    margin: 5px 0;
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.switch-item {
+    background-color: transparent;
+    outline: none;
+    border: none;
+    cursor: pointer;
+    margin: 0 10px;
+    white-space: nowrap;
+    color: var(--color-disabled);
+    transition: color .24s ease-in, transform .12s ease-in;
+}
+
+.switch-item:hover {
+    color: var(--color);
+    /* transform: scale(1.01); */
+    transition: color .24s ease-out, transform .24s ease-out;
+}
+
+.switch-item:active {
+    color: var(--color);
+    transform: translate(3px, 3px);
+    transition: color .12s ease-out, transform .06s linear;
+}
+
+.switch-item.on {
+    cursor: initial;
+    color: var(--color);
+    transform: scale(1.05);
+    transition: color .24s ease-out, transform .12s ease-out;
+}
+
+.switch-separator {
+    width: 2px;
+    height: 10px;
+    background: var(--color-disabled);
+}
