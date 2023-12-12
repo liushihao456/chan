@@ -120,9 +120,15 @@ const App = () => {
                             {i != freqs.length - 1 && <div className="switch-separator"></div>}
                         </>
                     ))}
-                    <button onClick={() => setTheme((t) => (t == 'dark' ? 'light' : 'dark'))}>theme</button>
                 </div>
             </div>
+
+            {
+            // <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+            //     <button onClick={() => setTheme((t) => (t == 'dark' ? 'light' : 'dark'))}>theme</button>
+            // </div>
+            }
+
             <Chart ref={chart} {...chartOptions}>
                 <Series
                     ref={series1}

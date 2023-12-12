@@ -6,7 +6,7 @@ const Context = createContext();
 export const Chart = forwardRef((props, ref) => {
     const [container, setContainer] = useState(false);
     return (
-        <div ref={(element) => setContainer(element)} style={{ flexGrow: 1 }}>
+        <div ref={(element) => setContainer(element)} style={{ flexGrow: 1, position: 'relative' }}>
             {container && <ChartContainer {...props} ref={ref} container={container} />}
         </div>
     );

@@ -1,0 +1,25 @@
+.legend-wrapper {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    z-index: 100;
+}
+
+.legend {
+    margin-left: 5px;
+    margin-right: 5px;
+    font-size: 10px;
+    cursor: pointer;
+    position: relative;
+}
+
+.legend.off::after {
+    content: '';
+    position: absolute;
+    width: 110%;
+    top: 50%;
+    left: -5%;
+    border-bottom: 1px solid;
+    border-color: inherit;
+}
