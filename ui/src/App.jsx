@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { Chart, Series } from './components/Chart';
+import { Indicators } from './components/Indicators';
 import './css/colors.css';
 import './css/switch.css';
 import { read_kline_csv, read_trades_csv } from './data/reader';
@@ -13,41 +14,57 @@ const App = () => {
 
     const freqs = useMemo(() => ['5min', '30min', 'daily'], []);
     const [freq, setFreq] = React.useState(freqs[0]);
+    const klineRef = useRef({});
 
-    useEffect(() => {
-        read_kline_csv(`./data/${freq}.csv`).then((v) => {
-            series1.current.setData(v);
+    const updateKline = useCallback(async (f) => {
+        const kline = klineRef.current;
+        if (f in kline && series1.current && series2.current) {
+            series1.current.setData(kline[f]);
             series2.current.setData(
-                v.map((x) => {
+                kline[f].map((x) => {
                     return { time: x.time, value: x.volume };
                 })
             );
             chart.current.timeScale().fitContent();
-            const markers = [];
-            read_trades_csv(`./data/trades/trades.csv`).then((v) => {
-                v.forEach(o => {
-                    markers.push({
-                        time: o.size > 0 ? o.entryTime : o.exitTime,
-                        position: 'belowBar',
-                        color: '#FF7F7F',
-                        shape: 'arrowUp',
-                        text: 'B',
-                    });
-                    markers.push({
-                        time: o.size > 0 ? o.exitTime : o.entryTime,
-                        position: 'aboveBar',
-                        color: '#40FF3A',
-                        shape: 'arrowDown',
-                        text: 'S',
-                    });
-                });
-                console.log(v);
-                console.log(markers);
-                markers.sort((a, b) => a.time - b.time);
-                series1.current.setMarkers(markers);
-            });
-        });
+        }
+    }, []);
+
+    useEffect(() => {
+        updateKline(freq);
     }, [freq]);
+
+    // Load kline and trades data
+    useEffect(() => {
+        freqs.forEach(f => {
+            read_kline_csv(`./data/${f}.csv`).then((res) => {
+                klineRef.current[f] = res;
+                if (f == freq)
+                    updateKline(freq);
+            })
+        });
+
+        read_trades_csv(`./data/trades/trades.csv`).then((v) => {
+            const markers = [];
+            v.forEach((o) => {
+                markers.push({
+                    time: o.size > 0 ? o.entryTime : o.exitTime,
+                    position: 'belowBar',
+                    color: '#FF7F7F',
+                    shape: 'arrowUp',
+                    text: 'B',
+                });
+                markers.push({
+                    time: o.size > 0 ? o.exitTime : o.entryTime,
+                    position: 'aboveBar',
+                    color: '#40FF3A',
+                    shape: 'arrowDown',
+                    text: 'S',
+                });
+            });
+            markers.sort((a, b) => a.time - b.time);
+            if (series1.current) series1.current.setMarkers(markers);
+        });
+    }, []);
 
     const klineOptions = useMemo(() => {
         if (theme == 'light') {
@@ -124,6 +141,7 @@ const App = () => {
                     priceFormat={{ type: 'volume' }}
                     priceScaleId=""
                 />
+                <Indicators freq={freq} />
             </Chart>
         </div>
     );

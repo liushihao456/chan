@@ -118,7 +118,7 @@ export const Series = forwardRef((props, ref) => {
         },
         free() {
             if (this._api) {
-                parent.free();
+                parent.api().removeSeries(this._api);
             }
         },
     });

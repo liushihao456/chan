@@ -1,4 +1,3 @@
-
 export async function read_kline_csv(fname, start_date, end_date) {
     const res = await fetch(fname);
     const text = await res.text();
@@ -107,6 +106,46 @@ export async function read_trades_csv(fname) {
                 obj['pnl'] = parseFloat(l[j]);
         }
         result.push(obj);
+    }
+
+    return result;
+}
+
+export async function read_indicator_csv(fname) {
+    const res = await fetch(fname);
+    const text = await res.text();
+
+    const result = [];
+    const lines = text.split('\n');
+    if (lines[0] == '<!DOCTYPE html>')
+        return result;
+
+    const arr = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)
+    for (var i = 1; i < arr.length; i++) {
+        result.push({name: arr[i][0] == '\"' ? arr[i].substring(1, arr[i].length - 1) : arr[i], value: []});
+    }
+
+    for (var i = 1; i < lines.length; i++) {
+        if (lines[i] == '')
+            continue;
+        const l = lines[i].split(',');
+        let time = 0;
+        for (var j = 0; j < l.length; j++) {
+            if (j == 0) {
+                let year = +l[j].substring(0, 4);
+                let month = +l[j].substring(5, 7);
+                let day = +l[j].substring(8, 10);
+                let hour = +l[j].substring(11, 13);
+                let minute = +l[j].substring(14, 16);
+                let sec = +l[j].substring(17, 19);
+                const t = new Date(year, month - 1, day, hour, minute, sec);
+                time = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
+            } else {
+                const obj = {time: time};
+                obj['value'] = parseFloat(l[j]);
+                result[j - 1]['value'].push(obj);
+            }
+        }
     }
 
     return result;
