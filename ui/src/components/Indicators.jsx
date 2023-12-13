@@ -35,8 +35,6 @@ export const Indicators = (props) => {
 
     const legendOnClick = useCallback(
         (name) => {
-            console.log(name);
-            console.log(indicatorDisabled[name]);
             if (!indicatorDisabled[name])
                 setIndicatorDisabled((v) => {
                     return {
@@ -46,7 +44,6 @@ export const Indicators = (props) => {
                 });
             else
                 setIndicatorDisabled((v) => {
-                    console.log(`setting ${name} to false`);
                     return {
                         ...v,
                         [name]: false,
@@ -55,8 +52,6 @@ export const Indicators = (props) => {
         },
         [indicatorDisabled]
     );
-
-    console.log(indicatorDisabled);
 
     return (
         freq in data && (
@@ -78,8 +73,8 @@ export const Indicators = (props) => {
                         ))}
                 </div>
                 {data[freq]
-                    .filter((v) => v['value'][v['value'].length - 1]['value'] > 2 && !indicatorDisabled[v['name']])
                     .map((v, i) => (
+                        v['value'][v['value'].length - 1]['value'] > 2 && !indicatorDisabled[v['name']] &&
                         <Series
                             type={'line'}
                             data={v['value']}
