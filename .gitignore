@@ -130,3 +130,4 @@ dmypy.json
 *.html
 .DS_Store
 /result/
+/ui/data/*.csv

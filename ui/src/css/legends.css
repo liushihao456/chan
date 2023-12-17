@@ -10,8 +10,11 @@
     margin-left: 5px;
     margin-right: 5px;
     font-size: 10px;
-    cursor: pointer;
     position: relative;
+}
+
+.legend.on, .legend.off {
+    cursor: pointer;
 }
 
 .legend.off::after {

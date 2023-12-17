@@ -1,19 +1,24 @@
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import React, { createContext, forwardRef, useContext, useEffect, useRef, useState } from 'react';
 
-const Context = createContext();
+export const ChartContext = createContext();
 
 export const Chart = forwardRef((props, ref) => {
+    const { height, ...rest } = props;
     const [container, setContainer] = useState(false);
+    const style = height ? { height: height, marginTop: '10px' } : { flexGrow: 1, height: '1px' };
     return (
-        <div ref={(element) => setContainer(element)} style={{ flexGrow: 1, position: 'relative' }}>
-            {container && <ChartContainer {...props} ref={ref} container={container} />}
+        <div
+            ref={(element) => setContainer(element)}
+            style={{ ...style, position: 'relative' }}
+        >
+            {container && <ChartContainer {...rest} timeScale={height ? {visible: false} : {}} ref={ref} container={container} />}
         </div>
     );
 });
 
 export const ChartContainer = forwardRef((props, ref) => {
-    const { children, container, ...rest } = props;
+    const { children, container, mainChart, ...rest } = props;
 
     const chartApiRef = useRef({
         api() {
@@ -35,10 +40,23 @@ export const ChartContainer = forwardRef((props, ref) => {
                     },
                     timeScale: {
                         timeVisible: true,
-                        secondsVisible: false,
+                        secondsVisible: true,
+                        fixLeftEdge: true,
+                        fixRightEdge: true,
                     },
                 });
                 this._api.timeScale().fitContent();
+
+                if (mainChart && mainChart.current) {
+                    mainChart.current.timeScale().subscribeVisibleLogicalRangeChange(timeRange => {
+                        this._api.timeScale().setVisibleLogicalRange(timeRange);
+                    });
+
+                    mainChart.current.timeScale().subscribeVisibleLogicalRangeChange(timeRange => {
+                        this._api.timeScale().setVisibleLogicalRange(timeRange);
+                    });
+                }
+
             }
             return this._api;
         },
@@ -53,17 +71,15 @@ export const ChartContainer = forwardRef((props, ref) => {
         const chartApi = chartApiRef.current;
         const chart = chartApi.api();
 
-        const handleResize = () => {
-            chart.applyOptions({
-                ...rest,
-                width: container.clientWidth,
-            });
-        };
-
-        window.addEventListener('resize', handleResize);
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                chart.resize(entry.contentRect.width, entry.contentRect.height);
+            }
+        });
+        observer.observe(container);
         return () => {
-            window.removeEventListener('resize', handleResize);
-            chart.remove();
+            observer.unobserve(container);
+            chartApi.free();
         };
     }, []);
 
@@ -82,12 +98,12 @@ export const ChartContainer = forwardRef((props, ref) => {
         chartApiRef.current.api().applyOptions(rest);
     }, [rest]);
 
-    return <Context.Provider value={chartApiRef.current}>{props.children}</Context.Provider>;
+    return <ChartContext.Provider value={chartApiRef.current}>{props.children}</ChartContext.Provider>;
 });
 
 export const Series = forwardRef((props, ref) => {
     const { children, data, type, ...rest } = props;
-    const parent = useContext(Context);
+    const parent = useContext(ChartContext);
     const seriesRef = useRef({
         api() {
             if (!this._api) {
@@ -117,8 +133,12 @@ export const Series = forwardRef((props, ref) => {
             return this._api;
         },
         free() {
-            if (this._api) {
-                parent.api().removeSeries(this._api);
+            if (parent.api() && this._api) {
+                try {
+                    parent.api().removeSeries(this._api);
+                } catch (e) {
+                    
+                }
             }
         },
     });
@@ -134,5 +154,5 @@ export const Series = forwardRef((props, ref) => {
         seriesRef.current.api().applyOptions(rest);
     }, [rest]);
 
-    return <Context.Provider value={seriesRef.current}>{props.children}</Context.Provider>;
+    return <ChartContext.Provider value={seriesRef.current}>{props.children}</ChartContext.Provider>;
 });

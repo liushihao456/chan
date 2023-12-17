@@ -31,7 +31,7 @@ class BBands(Strategy):
         self.ma50 = self.I(talib.EMA, self.data.Close, 50)
         self.ma60 = self.I(talib.EMA, self.data.Close, 60)
         self.ma70 = self.I(talib.EMA, self.data.Close, 70)
-        self.emadiff = self.I(self.ema_diff, self.ma50, self.ma60, self.ma70)
+        # self.emadiff = self.I(self.ema_diff, self.ma50, self.ma60, self.ma70)
         # self.bbands = self.I(talib.BBANDS, self.data.Close, 20, 2, 2, 0)
         self.bbands = self.I(BBANDS, self.data.Close, 20, 2)
         # self.supertrend = self.I(
