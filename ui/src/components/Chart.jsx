@@ -52,9 +52,9 @@ export const ChartContainer = forwardRef((props, ref) => {
                         this._api.timeScale().setVisibleLogicalRange(timeRange);
                     });
 
-                    mainChart.current.timeScale().subscribeVisibleLogicalRangeChange(timeRange => {
-                        this._api.timeScale().setVisibleLogicalRange(timeRange);
-                    });
+                    // this._api.timeScale().subscribeVisibleLogicalRangeChange(timeRange => {
+                    //     mainChart.current.timeScale().setVisibleLogicalRange(timeRange);
+                    // });
                 }
 
             }
@@ -136,9 +136,7 @@ export const Series = forwardRef((props, ref) => {
             if (parent.api() && this._api) {
                 try {
                     parent.api().removeSeries(this._api);
-                } catch (e) {
-                    
-                }
+                } catch (e) {}
             }
         },
     });

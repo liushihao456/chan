@@ -33,7 +33,6 @@ export async function read_kline_csv(fname, start_date, end_date) {
                 year = +l[j].substring(0, 4);
                 month = +l[j].substring(4, 6);
                 day = +l[j].substring(6, 8);
-                // obj['time'] = `${l[j].substring(0, 4)}-${l[j].substring(4, 6)}-${l[j].substring(6, 8)}`;
                 date = parseInt(l[j]);
             }
             if (headers[j] == 'TradingTime') {
@@ -115,7 +114,7 @@ export async function read_indicator_csv(fname) {
 
     const arr = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
     for (var i = 1; i < arr.length; i++) {
-        result.push({ name: arr[i][0] == '"' ? arr[i].substring(1, arr[i].length - 1) : arr[i], value: [] });
+        result.push({ name: arr[i][0] == "\"" ? arr[i].substring(1, arr[i].length - 1) : arr[i], value: [] });
     }
 
     for (var i = 1; i < lines.length; i++) {

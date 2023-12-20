@@ -1,11 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../css/legends.css';
 import { Series } from './Chart';
+import { read_indicator_csv } from '../js/reader';
 
-export const InlineIndicators = (props) => {
-    const { data } = props;
+export const OverlayIndicators = (props) => {
     const [indicatorDisabled, setIndicatorDisabled] = useState({});
+    const [data, setData] = useState([]);
     const colors = useRef({});
+
+    useEffect(() => {
+        read_indicator_csv(`./data/overlay_indicators.csv`).then((res) => {
+            if (res.length > 0) setData(res);
+            else setData([]);
+        });
+    }, []);
+
 
     const getRandomColor = useCallback(() => {
         var letters = '0123456789ABCDEF';
