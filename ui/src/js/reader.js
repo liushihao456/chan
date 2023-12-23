@@ -18,7 +18,7 @@ export async function read_kline_csv(fname, start_date, end_date) {
             minute = 0,
             sec = 0;
         for (var j = 0; j < headers.length; j++) {
-            if (headers[j] == 'date_time') {
+            if (headers[j] == 'date_time' || headers[j] == 'Datetime') {
                 year = +l[j].substring(0, 4);
                 month = +l[j].substring(5, 7);
                 day = +l[j].substring(8, 10);
@@ -60,49 +60,21 @@ export async function read_kline_csv(fname, start_date, end_date) {
     return result;
 }
 
-export async function read_trades_csv(fname) {
-    const res = await fetch(fname);
-    const text = await res.text();
-
-    const result = [];
-    const lines = text.split(/\r?\n/);
-    const headers = lines[0].split(',');
-
-    for (var i = 1; i < lines.length; i++) {
-        const obj = {};
-        const l = lines[i].split(',');
-        if (l.length < headers.length) continue;
-        for (var j = 0; j < headers.length; j++) {
-            if (headers[j] == 'EntryTime') {
-                let year = +l[j].substring(0, 4);
-                let month = +l[j].substring(5, 7);
-                let day = +l[j].substring(8, 10);
-                let hour = +l[j].substring(11, 13);
-                let minute = +l[j].substring(14, 16);
-                let sec = +l[j].substring(17, 19);
-                const t = new Date(year, month - 1, day, hour, minute, sec);
-                obj['entryTime'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
-            }
-            if (headers[j] == 'ExitTime') {
-                let year = +l[j].substring(0, 4);
-                let month = +l[j].substring(5, 7);
-                let day = +l[j].substring(8, 10);
-                let hour = +l[j].substring(11, 13);
-                let minute = +l[j].substring(14, 16);
-                let sec = +l[j].substring(17, 19);
-                const t = new Date(year, month - 1, day, hour, minute, sec);
-                obj['exitTime'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
-            }
-            if (headers[j] == 'Size') obj['size'] = parseFloat(l[j]);
-            if (headers[j] == 'EntryPrice') obj['entryPrice'] = parseFloat(l[j]);
-            if (headers[j] == 'ExitPrice') obj['exitPrice'] = parseFloat(l[j]);
-            if (headers[j] == 'PnL') obj['pnl'] = parseFloat(l[j]);
-        }
-        result.push(obj);
+function csvToArray(text) {
+    let p = '', row = [''], ret = [row], i = 0, r = 0, s = !0, l;
+    for (l of text) {
+        if ('"' === l) {
+            if (s && l === p) row[i] += l;
+            s = !s;
+        } else if (',' === l && s) l = row[++i] = '';
+        else if ('\n' === l && s) {
+            if ('\r' === p) row[i] = row[i].slice(0, -1);
+            row = ret[++r] = [l = '']; i = 0;
+        } else row[i] += l;
+        p = l;
     }
-
-    return result;
-}
+    return ret[0];
+};
 
 export async function read_indicator_csv(fname) {
     const res = await fetch(fname);
@@ -112,7 +84,8 @@ export async function read_indicator_csv(fname) {
     const lines = text.split(/\r?\n/);
     if (lines[0] == '<!DOCTYPE html>') return result;
 
-    const arr = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+    const arr = csvToArray(lines[0]);
+    // const arr = lines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
     for (var i = 1; i < arr.length; i++) {
         result.push({ name: arr[i][0] == "\"" ? arr[i].substring(1, arr[i].length - 1) : arr[i], value: [] });
     }
@@ -289,8 +262,9 @@ export async function read_csv(fname) {
                 }
                 const t = new Date(year, month - 1, day, hour, minute, sec, millisec);
                 obj['time'] = (t.getTime() - t.getTimezoneOffset() * 60000) / 1000;
+            } else {
+                obj[headers[j]] = parseFloat(l[j]);
             }
-            obj[headers[j]] = parseFloat(l[j]);
         }
         result.push(obj);
     }

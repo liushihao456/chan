@@ -15,7 +15,6 @@ export const OverlayIndicators = (props) => {
         });
     }, []);
 
-
     const getRandomColor = useCallback(() => {
         var letters = '0123456789ABCDEF';
         var color = '#';

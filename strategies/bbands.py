@@ -1,91 +1,103 @@
-from backtesting import Strategy
-import talib
-from backtesting.lib import crossover, resample_apply
+import backtrader as bt
 from ta import BBANDS, SUPERTREND
-from math import ceil, floor
-import numpy as np
 
-class BBands(Strategy):
-    suptertrend_atr_n = 14
-    suptertrend_atr_m = 2
 
-    def ema_diff(self, ema1, ema2, ema3):
-        return (ema3 - ema1) * 0.5
+# Create a Stratey
+class BBands(bt.Strategy):
+    params = (
+        ('maperiod', 15),
+        ('printlog', False),
+    )
 
-    def trend(self, open, close, upper_band, lower_band):
-        res = np.zeros(len(close))
-        for i in range(len(close)):
-            if i < 2:
-                res[i] = 0
-            else:
-                if close[i] < lower_band[i] and close[i-1] < lower_band[i-1] and close[i-2] < lower_band[i-2] \
-                   and close[i] < open[i] and close[i-1] < open[i-1] and close[i-2] < open[i-2]:
-                    res[i] = -1
-                if close[i] > upper_band[i] and close[i-1] > upper_band[i-1] and close[i-2] > upper_band[i-2] \
-                   and close[i] > open[i] and close[i-1] > open[i-1] and close[i-2] > open[i-2]:
-                    res[i] = 1
-        return res
+    def log(self, txt, dt=None, doprint=False):
+        ''' Logging function fot this strategy'''
+        if self.params.printlog or doprint:
+            dt = dt or self.datas[0].datetime.date(0)
+            print('%s, %s' % (dt.isoformat(), txt))
 
-    def init(self):
-        self.initial_capital = 1000000
-        self.ma50 = self.I(talib.EMA, self.data.Close, 50)
-        self.ma60 = self.I(talib.EMA, self.data.Close, 60)
-        self.ma70 = self.I(talib.EMA, self.data.Close, 70)
-        # self.emadiff = self.I(self.ema_diff, self.ma50, self.ma60, self.ma70)
-        # self.bbands = self.I(talib.BBANDS, self.data.Close, 20, 2, 2, 0)
-        self.bbands = self.I(BBANDS, self.data.Close, 20, 2)
-        # self.supertrend = self.I(
-        #     SUPERTREND,
-        #     self.data.High,
-        #     self.data.Low,
-        #     self.data.Close,
-        #     self.suptertrend_atr_n,
-        #     self.suptertrend_atr_m,
-        # )
-        # self.ma10d = resample_apply('D', talib.EMA, self.data.Close, 5)
-        # self.ma20d = resample_apply('D', talib.EMA, self.data.Close, 10)
-        self.custom = self.I(self.trend, self.data.Open, self.data.Close, self.bbands[0], self.bbands[1])
+    def __init__(self):
+        # Keep a reference to the "close" line in the data[0] dataseries
+        self.dataclose = self.datas[0].close
+
+        # To keep track of pending orders and buy price/commission
+        self.order = None
+        self.buyprice = None
+        self.buycomm = None
+
+        # Add a MovingAverageSimple indicator
+        self.sma = bt.indicators.SimpleMovingAverage(
+            self.datas[0], period=self.params.maperiod)
+
+        self.bbands = bt.indicators.BollingerBands(self.datas[0])
+
+    def notify_order(self, order):
+        if order.status in [order.Submitted, order.Accepted]:
+            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
+            return
+
+        # Check if an order has been completed
+        # Attention: broker could reject order if not enough cash
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log(
+                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                    (order.executed.price,
+                     order.executed.value,
+                     order.executed.comm))
+
+                self.buyprice = order.executed.price
+                self.buycomm = order.executed.comm
+            else:  # Sell
+                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                         (order.executed.price,
+                          order.executed.value,
+                          order.executed.comm))
+
+            self.bar_executed = len(self)
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log('Order Canceled/Margin/Rejected')
+
+        # Write down: no pending order
+        self.order = None
+
+    def notify_trade(self, trade):
+        if not trade.isclosed:
+            return
+
+        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
+                 (trade.pnl, trade.pnlcomm))
 
     def next(self):
-        if self.ma50[-1] < self.ma60[-1] < self.ma70[-1]:
-            # if self.ma60[-1] / self.ma50[-1] - 1 > 0.005:
-            # if self.ma10d[-1] < self.ma20d[-1]:
-            # Allow sells only
-            if self.data.High[-1] >= self.bbands[0][-1] and self.data.Close[-1] < self.data.Open[-1] and self.data.Close[-1] < self.bbands[0][-1]:
-                self.sell()
-            # if crossover(self.data.Close, self.supertrend) or crossover(self.supertrend, self.data.Close):
-            #     self.position.close()
-        if self.ma50[-1] > self.ma60[-1] > self.ma70[-1]:
-            # if self.ma50[-1] / self.ma60[-1] - 1 > 0.005:
-            # if self.ma10d[-1] > self.ma20d[-1]:
-            # Allow sells only
-            if self.data.Low[-1] <= self.bbands[1][-1] and self.data.Close[-1] > self.data.Open[-1] and self.data.Close[-1] > self.bbands[1][-1]:
-                self.buy()
-            # if self.data.High[-1] >= self.bbands2[0][-1] and self.data.Close[-1] < self.data.Open[-1]:
-            #     self.position.close()
-            # if crossover(self.data.Close, self.supertrend) or crossover(self.supertrend, self.data.Close):
-            #     self.position.close()
+        # Simply log the closing price of the series from the reference
+        self.log('Close, %.2f' % self.dataclose[0])
 
-        for trade in self.trades:
-            if trade.is_long and not trade.sl:
-                # trade.sl = min(self.data.Low[-2], self.data.Low[-1])
-                trade.sl = min(self.data.Low[-3], self.data.Low[-2])
-                # p = trade.entry_price / (1 + 0.0015)
-                # trade.sl = ceil(p * 0.993 * 100) / 100
-            elif trade.is_short and not trade.sl:
-                # trade.sl = max(self.data.High[-2], self.data.High[-1])
-                trade.sl = max(self.data.High[-3], self.data.High[-2])
-                # p = trade.entry_price / (1 - 0.0015)
-                # trade.sl = floor(p * 1.007 * 100) / 100
+        # Check if an order is pending ... if yes, we cannot send a 2nd one
+        if self.order:
+            return
 
-            if trade.is_long:
-                if self.data.Close[-1] / trade.entry_price - 1 > 0.05:
-                    p = trade.tp if trade.tp else 0
-                    p = max(p, trade.entry_price + (self.data.High[-1] - trade.entry_price) * 0.7)
-                    trade.tp = p
-            elif trade.is_short:
-                if self.data.Close[-1] / trade.entry_price - 1 > 0.05:
-                    p = trade.tp if trade.tp else 10000
-                    p = min(p, trade.entry_price - (trade.entry_price - self.data.Low[-1]) * 0.7)
-                    trade.tp = p
+        # Check if we are in the market
+        if not self.position:
+
+            # Not yet ... we MIGHT BUY if ...
+            if self.dataclose[0] > self.sma[0]:
+
+                # BUY, BUY, BUY!!! (with all possible default parameters)
+                self.log('BUY CREATE, %.2f' % self.dataclose[0])
+
+                # Keep track of the created order to avoid a 2nd order
+                self.order = self.buy()
+
+        else:
+
+            if self.dataclose[0] < self.sma[0]:
+                # SELL, SELL, SELL!!! (with all possible default parameters)
+                self.log('SELL CREATE, %.2f' % self.dataclose[0])
+
+                # Keep track of the created order to avoid a 2nd order
+                self.order = self.sell()
+
+    # def stop(self):
+    #     self.log('(MA Period %2d) Ending Value %.2f' %
+    #              (self.params.maperiod, self.broker.getvalue()), doprint=True)
 

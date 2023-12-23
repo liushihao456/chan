@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef } from 'react';
-import { read_kline_csv, read_trades_csv } from '../js/reader';
+import { read_kline_csv, read_csv } from '../js/reader';
 import { ChartContext, Series } from './Chart';
 
 export const Kline = (props) => {
@@ -22,23 +22,27 @@ export const Kline = (props) => {
             }
         });
 
-        read_trades_csv(`./data/trades.csv`).then((v) => {
+        read_csv(`./data/trades.csv`).then((v) => {
             const markers = [];
             v.forEach((o) => {
-                markers.push({
-                    time: o.size > 0 ? o.entryTime : o.exitTime,
-                    position: 'belowBar',
-                    color: '#FF7F7F',
-                    shape: 'arrowUp',
-                    text: 'B',
-                });
-                markers.push({
-                    time: o.size > 0 ? o.exitTime : o.entryTime,
-                    position: 'aboveBar',
-                    color: '#40FF3A',
-                    shape: 'arrowDown',
-                    text: 'S',
-                });
+                if (o.Buy === o.Buy) {
+                    markers.push({
+                        time: o.time,
+                        position: 'belowBar',
+                        color: '#FF7F7F',
+                        shape: 'arrowUp',
+                        text: 'B',
+                    });
+                }
+                if (o.Sell === o.Sell) {
+                    markers.push({
+                        time: o.time,
+                        position: 'aboveBar',
+                        color: '#40FF3A',
+                        shape: 'arrowDown',
+                        text: 'S',
+                    });
+                }
             });
             markers.sort((a, b) => a.time - b.time);
             if (series1.current) series1.current.setMarkers(markers);
