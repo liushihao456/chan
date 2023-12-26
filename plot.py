@@ -78,9 +78,24 @@ class BacktraderPlotter:
             for lineidx in range(ind.size()):
                 name = ind.lines._getlinealias(lineidx)
                 line = ind.lines[lineidx]
+                arr = line.plot()
                 if label.startswith('Broker') and name == 'value':
-                    equity_df['Equity'] = line.plot()
-                if label.startswith('BuySell'):
+                    l1 = len(arr)
+                    l2 = len(equity_df)
+                    l3 = l1 - l2
+                    m = round(l1 / l3) - 1
+                    res = []
+                    counter = 0
+                    for a in arr:
+                        if counter == m:
+                            counter = 0
+                            continue
+                        res.append(a)
+                        counter += 1
+                    while len(res) < len(equity_df):
+                        res.append(arr[-(len(equity_df) - len(res))])
+                    equity_df['Equity'] = res
+                if label.startswith('BuySell') and len(arr) == len(trade_df):
                     if name == 'buy':
                         trade_df['Buy'] = line.plot()
                     if name == 'sell':
