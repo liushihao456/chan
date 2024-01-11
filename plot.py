@@ -63,17 +63,30 @@ class BacktraderPlotter:
         inds = strategy.getindicators()
         obs = strategy.getobservers()
         for ind in inds:
-            label = ind.plotlabel()
-            plotinfo = ind.plotinfo
-            if not getattr(plotinfo, 'plot'):
+            if not hasattr(ind, 'plotinfo'):
                 continue
+            plotinfo = ind.plotinfo
+            if not plotinfo.plot:
+                continue
+            label = ind.plotlabel()
             for lineidx in range(ind.size()):
                 line = ind.lines[lineidx]
-                if getattr(plotinfo, 'subplot'):
-                    subplot_ind_df = pd.concat([subplot_ind_df, pd.DataFrame({label: line.plot()})], axis=1)
+                if label == 'LinePlotterIndicator':
+                    label1 = ind.lines._getlinealias(ind.size() - 1)
                 else:
-                    overlay_ind_df = pd.concat([overlay_ind_df, pd.DataFrame({label: line.plot()})], axis=1)
+                    label1 = label
+                if getattr(plotinfo, 'subplot'):
+                    subplot_ind_df = pd.concat([subplot_ind_df, pd.DataFrame({label1: line.plot()})], axis=1)
+                else:
+                    overlay_ind_df = pd.concat([overlay_ind_df, pd.DataFrame({label1: line.plot()})], axis=1)
+                if label == 'LinePlotterIndicator':
+                    break
         for ind in obs:
+            if not hasattr(ind, 'plotinfo'):
+                continue
+            plotinfo = ind.plotinfo
+            if not plotinfo.plot:
+                continue
             label = ind.plotlabel()
             for lineidx in range(ind.size()):
                 name = ind.lines._getlinealias(lineidx)
