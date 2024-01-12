@@ -3,6 +3,7 @@ import threading
 import webbrowser
 import time
 import sys
+import os
 import pandas as pd
 import backtrader as bt
 
@@ -93,26 +94,33 @@ class BacktraderPlotter:
                 line = ind.lines[lineidx]
                 arr = line.plot()
                 if label.startswith('Broker') and name == 'value':
-                    l1 = len(arr)
-                    l2 = len(equity_df)
-                    l3 = l1 - l2
-                    m = round(l1 / l3) - 1
-                    res = []
-                    counter = 0
-                    for a in arr:
-                        if counter == m:
-                            counter = 0
-                            continue
-                        res.append(a)
-                        counter += 1
-                    while len(res) < len(equity_df):
-                        res.append(arr[-(len(equity_df) - len(res))])
-                    equity_df['Equity'] = res
+                    if len(arr) != len(equity_df):
+                        l1 = len(arr)
+                        l2 = len(equity_df)
+                        l3 = l1 - l2
+                        m = round(l1 / l3) - 1
+                        res = []
+                        counter = 0
+                        for a in arr:
+                            if counter == m:
+                                counter = 0
+                                continue
+                            res.append(a)
+                            counter += 1
+                        while len(res) < len(equity_df):
+                            res.append(arr[-(len(equity_df) - len(res))])
+                        equity_df['Equity'] = res
+                    else:
+                        equity_df['Equity'] = arr
                 if label.startswith('BuySell') and len(arr) == len(trade_df):
                     if name == 'buy':
                         trade_df['Buy'] = line.plot()
                     if name == 'sell':
                         trade_df['Sell'] = line.plot()
+        if not os.path.exists('./ui/dist'):
+            os.mkdir('./ui/dist')
+        if not os.path.exists('./ui/dist/data'):
+            os.mkdir('./ui/dist/data')
         df.to_csv('./ui/dist/data/kline.csv', index=False)
         equity_df.to_csv('./ui/dist/data/equity.csv', index=False)
         overlay_ind_df.to_csv('./ui/dist/data/overlay_indicators.csv', index=False)

@@ -1,5 +1,4 @@
 import backtrader as bt
-from ta import BBANDS, SUPERTREND
 
 
 # Create a Stratey
@@ -34,7 +33,7 @@ class BBands(bt.Strategy):
 
         self.up_trend = bt.And(self.ema1 > self.ema2, self.ema2 > self.ema3)
         self.down_trend = bt.And(self.ema1 < self.ema2, self.ema2 < self.ema3)
-        # self.bigger_up_trend = bt.And(self.dema1 > self.dema2, self.dema2 > self.dema3)
+        self.bigger_up_trend = bt.And(self.dema1 > self.dema2, self.dema2 > self.dema3)
         bt.LinePlotterIndicator(self.up_trend, name='Up trend')
         bt.LinePlotterIndicator(self.bigger_up_trend, name='Day up trend')
         # bt.LinePlotterIndicator(self.down_trend, name='Down trend')
