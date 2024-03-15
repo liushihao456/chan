@@ -1,5 +1,4 @@
 import backtrader as bt
-from ta import BBANDS, SUPERTREND
 
 
 class BBands(bt.Strategy):
@@ -31,41 +30,49 @@ class BBands(bt.Strategy):
 
         # self.up_trend = bt.And(self.ema1 > self.ema2, self.ema2 > self.ema3)
         # self.down_trend = bt.And(self.ema1 < self.ema2, self.ema2 < self.ema3)
-        # # self.bigger_up_trend = bt.And(self.dema1 > self.dema2, self.dema2 > self.dema3)
         # bt.LinePlotterIndicator(self.up_trend, name='Up trend')
-        # # bt.LinePlotterIndicator(self.bigger_up_trend, name='Day up trend')
-        # # bt.LinePlotterIndicator(self.down_trend, name='Down trend')
 
         self.bbands = bt.indicators.BollingerBands(self.datas[0])
-        self.atr = bt.indicators.ATR(self.datas[0])
+        self.rsi = bt.indicators.RSI(self.datas[0])
 
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
+    def notify_order(self, order: bt.Order):
+        if order.status == order.Submitted:
             return
 
-        if order.status in [order.Completed]:
+        if order.status == order.Accepted:
+            self.log('%s %s created' % (order.ExecTypes[order.exectype], 'buy' if order.isbuy() else 'sell'))
+            self.order = order
+            return
+
+        if order.status == order.Completed:
             if order.isbuy():
-                self.log('Buy executed, Price: %.2f, Position %d' %
-                         (order.executed.price, self.position.size))
+                self.log('%s Buy executed, Price: %.2f, Position %d' %
+                         (order.ExecTypes[order.exectype], order.executed.price, self.position.size))
 
                 if order.exectype != bt.Order.Stop and self.position:
-                    self.log('Sell stop created, Price: %.2f' % self.stopprice)
+                    # self.log('Stop Sell created, Price: %.2f' % self.stopprice)
                     self.order = self.sell(exectype=bt.Order.Stop, price=self.stopprice)
                     return
             else:
-                self.log('Sell executed, Price: %.2f, Position %d' %
-                         (order.executed.price, self.position.size))
+                self.log('%s Sell executed, Price: %.2f, Position %d' %
+                         (order.ExecTypes[order.exectype], order.executed.price, self.position.size))
 
                 if order.exectype != bt.Order.Stop and self.position:
-                    self.log('Buy stop created, Price: %.2f' % self.stopprice)
+                    # self.log('Stop Buy created, Price: %.2f' % self.stopprice)
                     self.order = self.buy(exectype=bt.Order.Stop, price=self.stopprice)
                     return
 
             self.bar_executed = len(self)
 
+        elif order.status == order.Canceled:
+            self.log('%s Order canceled' % order.ExecTypes[order.exectype])
+
+        elif order.status == order.Margin:
+            self.log('%s Order margin' % order.ExecTypes[order.exectype])
+
         # Broker could reject order if not enough cash
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
+        elif order.status == order.Rejected:
+            self.log('%s Order rejected' % order.ExecTypes[order.exectype])
 
         self.order = None
 
@@ -82,29 +89,29 @@ class BBands(bt.Strategy):
             if self.ema1[0] > self.ema2[0] > self.ema3[0]:
                 if self.data.low[0] <= self.bbands.bot[0] and self.data.close[0] >= self.data.open[0]:
                     self.log('Buy create, %.2f' % self.dataclose[0])
-                    self.order = self.buy()
+                    self.buy()
                     self.stopprice = min(self.data.low[0], self.data.low[-1]) - 1
             # if self.dema1[0] < self.dema2[0] < self.dema3[0]:
             if self.ema1[0] < self.ema2[0] < self.ema3[0]:
                 if self.data.high[0] >= self.bbands.top[0] and self.data.close[0] <= self.data.open[0]:
                     self.log('Short sell create, %.2f position %d' % (self.dataclose[0], self.position.size))
-                    self.order = self.sell()
+                    self.sell()
                     self.stopprice = max(self.data.high[0], self.data.high[-1]) + 1
         else:
             if self.position.size > 0:
-                if self.data.high[0] >= self.bbands.top[0] and self.data.close[0] <= self.data.open[0]:
-                # if self.dataclose[-1] >= self.ema1[-1] and self.dataclose[0] < self.ema1[0]:
+                # if self.data.high[0] >= self.bbands.top[0] and self.data.close[0] <= self.data.open[0]:
+                if self.data.close[-1] >= self.ema1[-1] and self.data.close[0] < self.ema1[0]:
                     self.log('Sell create, %.2f' % self.dataclose[0])
                     if self.order:
                         self.broker.cancel(self.order)
-                    self.order = self.sell()
+                    self.sell()
             if self.position.size < 0:
-                if self.data.low[0] <= self.bbands.bot[0] and self.data.close[0] >= self.data.open[0]:
-                # if self.dataclose[-1] <= self.ema1[-1] and self.dataclose[0] > self.ema1[0]:
+                # if self.data.low[0] <= self.bbands.bot[0] and self.data.close[0] >= self.data.open[0]:
+                if self.data.close[-1] <= self.ema1[-1] and self.data.close[0] > self.ema1[0]:
                     self.log('Buy cover create, %.2f' % self.dataclose[0])
                     if self.order:
                         self.broker.cancel(self.order)
-                    self.order = self.buy()
+                    self.buy()
 
     def stop(self):
         self.log('Ending Value %.2f' % (self.broker.getvalue()), doprint=True)

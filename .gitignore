@@ -9,3 +9,4 @@ __pycache__/
 /ui/tickdata/
 /data/tmp.csv
 /ui/dist/
+/ui/package-lock.json

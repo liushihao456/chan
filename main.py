@@ -26,11 +26,9 @@ if __name__ == '__main__':
         openinterest=-1,
         dtformat='%Y%m%d',
         tmformat='%H%M%S000',
-        # dtformat='%Y-%m-%d',
-        # tmformat='%H:%M:%S.000',
     )
     # cerebro.adddata(data)
-    cerebro.resampledata(data, timeframe=bt.TimeFrame.Minutes, compression=30)
+    cerebro.resampledata(data, timeframe=bt.TimeFrame.Minutes, compression=30, boundoff=1, rightedge=False)
     cerebro.resampledata(data, timeframe=bt.TimeFrame.Days)
     cerebro.addstrategy(BBands)
     # cerebro.addstrategy(StrategyWave)

@@ -9,7 +9,7 @@ import backtrader as bt
 
 PORT = 8081
 DIRECTORY = "ui/dist"
-URL = f'http://localhost:{PORT}'
+URL = f'http://127.0.0.1:{PORT}'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
