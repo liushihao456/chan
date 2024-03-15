@@ -31,6 +31,24 @@ const App = () => {
                     color: theme == 'light' ? '#D6DCDE' : '#444',
                 },
             },
+            rightPriceScale: {
+                minimumWidth: 65,
+            },
+        };
+    }, [theme]);
+
+    const subplotChartOptions = useMemo(() => {
+        return {
+            ...chartOptions,
+            grid: {
+                vertLines: {
+                    color: theme == 'light' ? '#D6DCDE' : '#444',
+                },
+                horzLines: {
+                    color: theme == 'light' ? '#D6DCDE' : '#444',
+                    visible: true,
+                },
+            },
         };
     }, [theme]);
 
@@ -49,8 +67,8 @@ const App = () => {
                     // <TickChart />
                 }
             </Chart>
-            <SubplotIndicators mainChart={chart1} chartOptions={chartOptions} />
-            <Equity mainChart={chart1} chartOptions={chartOptions} />
+            <SubplotIndicators mainChart={chart1} chartOptions={subplotChartOptions} />
+            <Equity mainChart={chart1} chartOptions={subplotChartOptions} />
         </div>
     );
 };

@@ -35,6 +35,7 @@ export const ChartContainer = forwardRef((props, ref) => {
                             style: 3,
                         },
                         horzLines: {
+                            style: 3,
                             visible: false,
                         },
                     },
