@@ -5,18 +5,11 @@ import { Equity } from './components/Equity';
 import { Kline } from './components/Kline';
 import { OverlayIndicators } from './components/OverlayIndicators';
 import { SubplotIndicators } from './components/SubplotIndicators';
-import { TickChart } from './components/TickChart';
 import './css/colors.css';
 
 const App = () => {
     const [theme, setTheme] = useState('dark');
     const chart1 = useRef();
-
-    // useEffect(() => {
-    //     read_predicts_csv(`./tickdata/predicts.csv`).then((res) => {
-    //         setInds(x => [...x, {name: 'predicts', value: res}]);
-    //     });
-    // }, []);
 
     const chartOptions = useMemo(() => {
         return {
@@ -32,7 +25,7 @@ const App = () => {
                 },
             },
             rightPriceScale: {
-                minimumWidth: 65,
+                minimumWidth: 70,
             },
         };
     }, [theme]);
@@ -63,9 +56,6 @@ const App = () => {
             <Chart ref={chart1} {...chartOptions}>
                 <Kline theme={theme} />
                 <OverlayIndicators />
-                {
-                    // <TickChart />
-                }
             </Chart>
             <SubplotIndicators mainChart={chart1} chartOptions={subplotChartOptions} />
             <Equity mainChart={chart1} chartOptions={subplotChartOptions} />
