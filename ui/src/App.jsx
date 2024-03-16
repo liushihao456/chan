@@ -26,6 +26,10 @@ const App = () => {
             },
             rightPriceScale: {
                 minimumWidth: 70,
+                scaleMargins: {
+                    top: 0.02,
+                    bottom: 0.1,
+                },
             },
         };
     }, [theme]);

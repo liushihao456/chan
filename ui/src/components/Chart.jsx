@@ -124,7 +124,7 @@ export const Series = forwardRef((props, ref) => {
                     this._api.priceScale().applyOptions({
                         // set the positioning of the volume series
                         scaleMargins: {
-                            top: 0.8, // highest point of the series will be 80% away from the top
+                            top: 0.85, // highest point of the series will be 80% away from the top
                             bottom: 0,
                         },
                     });
